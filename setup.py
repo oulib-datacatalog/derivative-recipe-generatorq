@@ -7,7 +7,7 @@ setup(name='derivative-recipe-generatorq',
       install_requires=[
           'celery',
           'bagit==1.7.0',
-          'requests==2.20.0',
+          'requests==2.25.0',
 	  'pillow==7.0.0',
           'boto3~=1.6',
 	  'lxml',
