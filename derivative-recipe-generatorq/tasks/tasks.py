@@ -125,8 +125,8 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             file_extensions = ["tif","TIFF","TIF","tiff"]
             #file_paths=[]
             # get the filename and then download it and search.
-            path_to_manifest_file = "{1}/{2}/manifest*.txt".format(s3_source,bag)
-            path_to_bag = "{0}/{1}/{2}/data/".format(mount_point, s3_source, bag)
+            #path_to_manifest_file = "{1}/{2}/manifest*.txt".format(s3_source,bag)
+            #path_to_bag = "{0}/{1}/{2}/data/".format(mount_point, s3_source, bag)
             #for file in glob.glob(path_to_manifest_file):
             for obj in bucket.objects.all():
                 if 'manifest-md5' in obj.key:
