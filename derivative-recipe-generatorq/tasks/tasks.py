@@ -138,7 +138,7 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
                 # now try to use the filter one
                 else:
                     continue;
-            outdir = "{0}/{1}/{2}/{3}".format(s3_destination,bag,format_params)
+
             """
             if os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)) and force_overwrite:
                 rmtree(outdir)
