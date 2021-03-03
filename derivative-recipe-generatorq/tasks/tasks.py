@@ -81,8 +81,8 @@ def listpagefiles(task_id,bag_name, paramstring):
         recipe =  loads(f.read())
     return [page['file'] for page in recipe['recipe']['pages']]
 
-@task
-def read_source_update_derivative(bags,s3_source="source",s3_destination="derivative",outformat="TIFF",filter='ANTIALIAS',scale=None, crop=None,force_overwrite=False):
+@task(bind=True)
+def read_source_update_derivative(self,bags,s3_source="source",s3_destination="derivative",outformat="TIFF",filter='ANTIALIAS',scale=None, crop=None,force_overwrite=False):
     """
 
     This function is the starting function of the workflow used for derivative generation of the files.
@@ -101,7 +101,7 @@ def read_source_update_derivative(bags,s3_source="source",s3_destination="deriva
     :returns dictionary with s3_destionation , bags_with_mmsid:{} , format_params as keys and there values.
     """
 
-    task_id = str(read_source_update_derivative.request.id)
+    task_id = str(self.request.id)
     resultpath = os.path.join(basedir, 'oulib_tasks/', task_id)
     os.makedirs(resultpath)
     s3 = boto3.resource('s3')
@@ -111,66 +111,59 @@ def read_source_update_derivative(bags,s3_source="source",s3_destination="deriva
     if type(bags) == 'str':
         bags = [bags]
     for bag in bags:
-        try:
-            format_params = _params_as_string(outformat,filter,scale,crop)
+        format_params = _params_as_string(outformat,filter,scale,crop)
+        #code for boto3
+        src_input = os.path.join(resultpath, 'src/', bag)
+        output = os.path.join(resultpath, 'derivative/', bag)
+        os.makedirs(src_input)
+        os.makedirs(output)
+        source_location = "{0}/{1}/data".format(s3_source, bag)
+        path_to_bag = "{0}/{1}/{2}/".format(mount_point,s3_source,bag)
+        mmsid =get_mmsid(bag,path_to_bag)
+        if mmsid:
+            bags_with_mmsids[bag]=OrderedDict()
+            file_extensions = ["tif","TIFF","TIF","tiff"]
+            #file_paths=[]
+            # get the filename and then download it and search.
+            path_to_manifest_file = "{1}/{2}/manifest*.txt".format(s3_source,bag)
+            path_to_bag = "{0}/{1}/{2}/data/".format(mount_point, s3_source, bag)
+            #for file in glob.glob(path_to_manifest_file):
+            for obj in bucket.objects.all():
+                if 'manifest-md5' in obj.key:
+                    inpath = "{0}/{1}".format(src_input, obj.key.split('/')[-1])
+                    s3.meta.client.download_file(bucket.name, obj.key, inpath)
+                    if(getIntersection(inpath)):
+                        logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
+                # this code is not required
+                # now try to use the filter one
+                else:
+                    continue;
+            outdir = "{0}/{1}/{2}/{3}".format(s3_destination,bag,format_params)
+            """
+            if os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)) and force_overwrite:
+                rmtree(outdir)
+            if os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)) and not force_overwrite:
+                raise Exception("derivative already exists and force_overwrite is set to false")
+            if not os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)):
+                os.makedirs(outdir)"""
+            for obj in bucket.objects.filter(Prefix=source_location):
+                filename = obj.key;
+                if filename.split('.')[-1].lower() in file_extensions:
+                    inpath = "{0}/{1}".format(src_input, filename.split('/')[-1])
+                    s3.meta.client.download_file(bucket.name, filename, inpath)
+                    outpath = "{0}/{1}.{2}".format(output, filename.split('/')[-1].split('.')[0].lower(),
+                                                   _formatextension(outformat))
+                    #outpath = '{0}/{1}/{2}/{3}/{4}.{5}'.format(mount_point,"derivative",bag,format_params,file.split('/')[-1].split('.')[0].lower(),_formatextension(outformat))
+                    processimage(inpath=inpath,outpath=outpath,outformat=outformat,filter=filter,scale=scale,crop=crop)
+                os.remove(inpath)
+            bags_with_mmsids[bag]['mmsid'] = mmsid
+        else:
+            update_catalog(task_id,bag,format_params,mmsid)
+        shutil.rmtree(os.path.join(resultpath, 'src/', bag))
 
-            #code for boto3
-
-            src_input = os.path.join(resultpath, 'src/', bag)
-            output = os.path.join(resultpath, 'derivative/', bag)
-            os.makedirs(src_input)
-            os.makedirs(output)
-            source_location = "{0}/{1}/data".format(s3_source, bag)
-
-
-
-            path_to_bag = "{0}/{1}/{2}/".format(mount_point,s3_source,bag)
-            mmsid =get_mmsid(bag,path_to_bag)
-            if mmsid:
-                bags_with_mmsids[bag]=OrderedDict()
-                file_extensions = ["tif","TIFF","TIF","tiff"]
-                #file_paths=[]
-
-                # get the filename and then download it and search.
-                path_to_manifest_file = "{1}/{2}/manifest*.txt".format(s3_source,bag)
-                path_to_bag = "{0}/{1}/{2}/data/".format(mount_point, s3_source, bag)
-
-                #for file in glob.glob(path_to_manifest_file):
-                for obj in bucket.objects.all():
-                    if 'manifest-md5' in obj.key:
-                        inpath = "{0}/{1}".format(src_input, obj.key.split('/')[-1])
-                        s3.meta.client.download_file(bucket.name, obj.key, inpath)
-                        if(getIntersection(inpath)):
-                            logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
-                    # this code is not required
-                    # now try to use the filter one
-                    else:
-                        continue;
-                outdir = "{0}/{1}/{2}/{3}".format(s3_destination,bag,format_params)
-                """
-                if os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)) and force_overwrite:
-                    rmtree(outdir)
-                if os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)) and not force_overwrite:
-                    raise Exception("derivative already exists and force_overwrite is set to false")
-                if not os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)):
-                    os.makedirs(outdir)"""
-                for obj in bucket.objects.filter(Prefix=source_location):
-                    filename = obj.key;
-                    if filename.split('.')[-1].lower() in file_extensions:
-                        inpath = "{0}/{1}".format(src_input, filename.split('/')[-1])
-                        s3.meta.client.download_file(bucket.name, filename, inpath)
-                        outpath = "{0}/{1}.{2}".format(output, filename.split('/')[-1].split('.')[0].lower(),
-                                                       _formatextension(outformat))
-                        #outpath = '{0}/{1}/{2}/{3}/{4}.{5}'.format(mount_point,"derivative",bag,format_params,file.split('/')[-1].split('.')[0].lower(),_formatextension(outformat))
-                        processimage(inpath=inpath,outpath=outpath,outformat=outformat,filter=filter,scale=scale,crop=crop)
-                    os.remove(inpath);
-                bags_with_mmsids[bag]['mmsid'] = mmsid
-            else:
-                update_catalog(task_id,bag,format_params,mmsid)
-            shutil.rmtree(os.path.join(resultpath, 'src/', bag))
-        except Exception as e:
-            logging.error(e)
-            logging.error("handled exception here for - - {0}".format(bag))
+        # except Exception as e:
+        #     logging.error(e)
+        #     logging.error("handled exception here for - - {0}".format(bag))
     return {"s3_destination": s3_destination,"task_id":task_id,
             "bags":bags_with_mmsids,"format_params":format_params}
 
