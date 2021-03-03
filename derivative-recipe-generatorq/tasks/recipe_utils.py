@@ -10,11 +10,14 @@ from uuid import uuid5, NAMESPACE_DNS
 repoUUID = uuid5(NAMESPACE_DNS, 'repository.ou.edu')
 
 ou_derivative_bag_url = "https://bag.ou.edu/derivative"
+basedir = "/data/web_data/static"
 
-def _get_path(bag_name,formatparams):
-    return "/mnt/derivative/{0}/{1}".format(bag_name,formatparams)
 
-def make_recipe(bag_name,mmsid,payload,formatparams,title):
+
+def _get_path(taskid,bag_name,formatparams):
+    return "{0}/oulib_tasks/{1}/derivative/{2}/{3}".format(basedir,taskid,bag_name,formatparams)
+
+def make_recipe(task_id,bag_name,mmsid,payload,formatparams,title):
     """
         This file returns a dictionary with all the details needed by the recipe
         args:
@@ -33,7 +36,7 @@ def make_recipe(bag_name,mmsid,payload,formatparams,title):
 
     bib = get_bib_record(mmsid["mmsid"])
     logging.debug("Bib record value -- {0}".format(bib))
-    path = _get_path(bag_name,formatparams)
+    path = _get_path(task_id,bag_name,formatparams)
     meta['recipe']['metadata']=OrderedDict();
     if get_marc_xml(mmsid["mmsid"],path,bib):
         meta['recipe']['metadata'] = {}

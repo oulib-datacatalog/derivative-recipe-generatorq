@@ -8,6 +8,7 @@ from string import whitespace
 import requests
 from collections import OrderedDict
 import os
+import boto3
 
 
 def get_mmsid(bag_name,path_to_bag=None):
@@ -20,8 +21,12 @@ def get_mmsid(bag_name,path_to_bag=None):
     mmsid = re.findall("(?<!^)(?<!\d)\d{8,19}(?!\d)", bag_name)
     if mmsid:
         return mmsid[-1]
-    fh =open(path_to_bag+"bag-info.txt")
-    bag_info = yaml.load(fh)
+    # change it pull from environment variable
+    s3_bucket = 'ul-cc'
+    s3 = boto3.resource('s3')
+    s3_key = "{0}/{1}/{2}".format('source', bag_name, 'bag-info.txt')
+    recipe_obj = s3.Object(s3_bucket, s3_key)
+    bag_info = yaml.load(recipe_obj.get()['Body'].read())
     try:
         mmsid = bag_info['FIELD_EXTERNAL_DESCRIPTION'].split()[-1].strip()
         print(type(mmsid))

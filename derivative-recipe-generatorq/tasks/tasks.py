@@ -2,7 +2,7 @@ import random
 from collections import defaultdict
 from celery import chain
 from celery.task import task
-import glob as glob
+from glob import iglob
 from celery import Celery
 import celeryconfig
 from uuid import uuid5, NAMESPACE_DNS
@@ -12,6 +12,8 @@ from .derivative_utils import _params_as_string,_formatextension,_processimage
 from .recipe_utils import _get_path
 from .recipe_utils import *
 import logging
+import boto3,shutil
+
 
 
 
@@ -31,6 +33,7 @@ base_url = "https://cc.lib.ou.edu"
 api_url = "{0}/api".format(base_url)
 search_url = "{0}?query={{\"filter\": {{\"bag\": \"{1}\"}}}}"
 
+basedir = "/data/web_data/static"
 
 bagList=[]
 
@@ -63,7 +66,7 @@ def automate(outformat,filter,scale=None,crop=None,force_overwrite=False,bag=Non
         result.delay()
     return "automate kicked off"
 
-def listpagefiles(bag_name, paramstring):
+def listpagefiles(task_id,bag_name, paramstring):
     """
     This is a helper function which returns the list of pages.
 
@@ -72,7 +75,7 @@ def listpagefiles(bag_name, paramstring):
     :return: list of pagespaths [ '/x/y' ,'abc/xyz/' ... ]
     """
     filename = "{0}.json".format(bag_name)
-    path=_get_path(bag_name, paramstring)
+    path=_get_path(task_id,bag_name, paramstring)
     recipe_json = os.path.join(path,filename)
     with open(recipe_json,"r") as f:
         recipe =  loads(f.read())
@@ -97,45 +100,78 @@ def read_source_update_derivative(bags,s3_source="source",s3_destination="deriva
 
     :returns dictionary with s3_destionation , bags_with_mmsid:{} , format_params as keys and there values.
     """
+
+    task_id = str(read_source_update_derivative.request.id)
+    resultpath = os.path.join(basedir, 'oulib_tasks/', task_id)
+    os.makedirs(resultpath)
+    s3 = boto3.resource('s3')
+    # hardcode bucket name as of now
+    bucket = s3.Bucket('ul-cc')
     bags_with_mmsids = OrderedDict()
     if type(bags) == 'str':
         bags = [bags]
     for bag in bags:
         try:
             format_params = _params_as_string(outformat,filter,scale,crop)
+
+            #code for boto3
+
+            src_input = os.path.join(resultpath, 'src/', bag)
+            output = os.path.join(resultpath, 'derivative/', bag)
+            os.makedirs(src_input)
+            os.makedirs(output)
+            source_location = "{0}/{1}/data".format(s3_source, bag)
+
+
+
             path_to_bag = "{0}/{1}/{2}/".format(mount_point,s3_source,bag)
             mmsid =get_mmsid(bag,path_to_bag)
             if mmsid:
                 bags_with_mmsids[bag]=OrderedDict()
-                file_extensions = ["*.tif","*.TIFF","*.TIF","*.tiff"]
-                file_paths=[]
-                path_to_manifest_file = "{0}/{1}/{2}/manifest*.txt".format(mount_point,s3_source,bag)
+                file_extensions = ["tif","TIFF","TIF","tiff"]
+                #file_paths=[]
+
+                # get the filename and then download it and search.
+                path_to_manifest_file = "{1}/{2}/manifest*.txt".format(s3_source,bag)
                 path_to_bag = "{0}/{1}/{2}/data/".format(mount_point, s3_source, bag)
-                for file in glob.glob(path_to_manifest_file):
-                    if(getIntersection(file)):
-                        logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
+
+                #for file in glob.glob(path_to_manifest_file):
+                for obj in bucket.objects.all():
+                    if 'manifest-md5' in obj.key:
+                        inpath = "{0}/{1}".format(src_input, obj.key.split('/')[-1])
+                        s3.meta.client.download_file(bucket.name, obj.key, inpath)
+                        if(getIntersection(inpath)):
+                            logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
+                    # this code is not required
+                    # now try to use the filter one
                     else:
-                        for ext in file_extensions:
-                            file_paths.extend(glob.glob(os.path.join(path_to_bag,ext)))
-                if file_paths is None:
-                    continue;
-                outdir = "{0}/{1}/{2}/{3}".format(mount_point,s3_destination,bag,format_params)
+                        continue;
+                outdir = "{0}/{1}/{2}/{3}".format(s3_destination,bag,format_params)
+                """
                 if os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)) and force_overwrite:
                     rmtree(outdir)
                 if os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)) and not force_overwrite:
                     raise Exception("derivative already exists and force_overwrite is set to false")
                 if not os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)):
-                    os.makedirs(outdir)
-                for file in file_paths:
-                    outpath = '{0}/{1}/{2}/{3}/{4}.{5}'.format(mount_point,"derivative",bag,format_params,file.split('/')[-1].split('.')[0].lower(),_formatextension(outformat))
-                    processimage(inpath=file,outpath=outpath,outformat=outformat,filter=filter,scale=scale,crop=crop)
+                    os.makedirs(outdir)"""
+                for obj in bucket.objects.filter(Prefix=source_location):
+                    filename = obj.key;
+                    if filename.split('.')[-1].lower() in file_extensions:
+                        inpath = "{0}/{1}".format(src_input, filename.split('/')[-1])
+                        s3.meta.client.download_file(bucket.name, filename, inpath)
+                        outpath = "{0}/{1}.{2}".format(output, filename.split('/')[-1].split('.')[0].lower(),
+                                                       _formatextension(outformat))
+                        #outpath = '{0}/{1}/{2}/{3}/{4}.{5}'.format(mount_point,"derivative",bag,format_params,file.split('/')[-1].split('.')[0].lower(),_formatextension(outformat))
+                        processimage(inpath=inpath,outpath=outpath,outformat=outformat,filter=filter,scale=scale,crop=crop)
+                    os.remove(inpath);
                 bags_with_mmsids[bag]['mmsid'] = mmsid
             else:
-                update_catalog(bag,format_params,mmsid)
+                update_catalog(task_id,bag,format_params,mmsid)
+            shutil.rmtree(os.path.join(resultpath, 'src/', bag))
         except Exception as e:
             logging.error(e)
             logging.error("handled exception here for - - {0}".format(bag))
-    return {"s3_destination": s3_destination,
+    return {"s3_destination": s3_destination,"task_id":task_id,
             "bags":bags_with_mmsids,"format_params":format_params}
 
 def getIntersection(file):
@@ -181,7 +217,7 @@ def processimage(inpath, outpath, outformat="TIFF", filter="ANTIALIAS", scale=No
                   )
 
 @task
-def update_catalog(bag,paramstring,mmsid=None):
+def update_catalog(task_id,bag,paramstring,mmsid=None):
     """
 
     :param bag: bag name
@@ -216,7 +252,7 @@ def update_catalog(bag,paramstring,mmsid=None):
     #ask whether bag_name needs to be lower.
     document["derivatives"][paramstring]["recipe"] = recipe_url.format(bag, paramstring, bag)
     document["derivatives"][paramstring]["datetime"] = datetime.datetime.utcnow().isoformat()
-    document["derivatives"][paramstring]["pages"] = listpagefiles(bag, paramstring)
+    document["derivatives"][paramstring]["pages"] = listpagefiles(task_id,bag, paramstring)
     update_derivative_values = {
         "$set":
             {
@@ -227,7 +263,7 @@ def update_catalog(bag,paramstring,mmsid=None):
     return general_update_status.raw_result['nModified'] !=0
 
 @task
-def process_recipe(derivative_args):
+def process_recipe(derivative_args,rmlocal=True):
     """
         This function generates the recipe file and returns the json stats of which bags are successful
         and which are not.
@@ -235,26 +271,45 @@ def process_recipe(derivative_args):
         params:
         derivative_args:The arguments returned by read_source_update_derivative function.
     """
+    s3_bucket = 'ul-cc'
+    s3_destination = 'derivative'
     bags = derivative_args.get('bags') #bags = { "bagname1" : { "mmsid": value} , "bagName2":{"mmsid":value}, ..}
     format_params = derivative_args.get('format_params')
+    task_id = derivative_args.get('task_id')
     status_dict = defaultdict(list)
+    s3 = boto3.resource('s3')
+    bucket = s3.Bucket(s3_bucket)
     for bag_name,mmsid in bags.items():
         if not mmsid:
            status_dict["unsuccessful_bags"].append(bag_name)
            continue
-        bag_derivative(bag_name,format_params)
-        recipe_file_creation(bag_name,mmsid,format_params)
-        status = update_catalog(bag_name,format_params,mmsid["mmsid"])
+        bag_derivative(task_id,bag_name,format_params)
+        recipe_file_creation(task_id,bag_name,mmsid,format_params)
+        bagpath = "{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id, bag_name)
+        logging.info("Accessing bag at: {0}".format(bagpath))
+        for filepath in iglob("{0}/*.*".format(bagpath)):
+            filename = filepath.split('/')[-1].lower()
+            s3_key = "{0}/{1}/{2}/{3}".format(s3_destination, bag_name, format_params, filename)
+            logging.info("Saving {0} to {1}".format(filename, s3_key))
+            s3.meta.client.upload_file(filepath, bucket.name, s3_key)
+        for filepath in iglob("{0}/data/*.*".format(bagpath)):
+            filename = filepath.split('/')[-1].lower()
+            s3_key = "{0}/{1}/{2}/data/{3}".format(s3_destination, bag_name, format_params, filename)
+            logging.info("Saving {0} to {1}".format(filename, s3_key))
+            s3.meta.client.upload_file(filepath, bucket.name, s3_key)
+        status = update_catalog(task_id,bag_name,format_params,mmsid["mmsid"])
         if(not status):
            logging.error("The data of the bag - {0} not updated in catalog - "
                          "May be the record is not found or something is failed".format(bag_name))
            status_dict["unsuccessful_bags"].append(bag_name)
         else:
             status_dict["successful_bags"].append(bag_name)
+        if rmlocal is True:
+            rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id,bag_name))
     return "Derivative-Recipe stats : {0}".format(str(status_dict))
 
 @task
-def bag_derivative(bag_name,format_params,update_manifest=True):
+def bag_derivative(task_id,bag_name,format_params,update_manifest=True):
     """
         This methods create a bag for the derivative folder
         and updates the bag-info.txt generated
@@ -263,7 +318,7 @@ def bag_derivative(bag_name,format_params,update_manifest=True):
             update_manifest : boolean
     """
 
-    path = _get_path(bag_name,format_params)
+    path = _get_path(task_id,bag_name,format_params)
     try:
         bag=bagit.Bag(path)
     except bagit.BagError:
@@ -278,7 +333,7 @@ def bag_derivative(bag_name,format_params,update_manifest=True):
 
 
 @task
-def recipe_file_creation(bag_name,mmsid,format_params,title=None):
+def recipe_file_creation(task_id,bag_name,mmsid,format_params,title=None):
     """
         This method creates the recipe.json file and updates it into the derivative folder of the bag
         args:
@@ -286,12 +341,12 @@ def recipe_file_creation(bag_name,mmsid,format_params,title=None):
             mmsid: dictionary "mmsid":value
             formatparams :  str eg . jpeg_040_antialias
     """
-    path = _get_path(bag_name,format_params)
+    path = _get_path(task_id,bag_name,format_params)
     try:
         bag = bagit.Bag(path)
         payload = bag.payload_entries()
         recipefile = "{0}/{1}.json".format(path,bag_name)
-        recipe=make_recipe(bag_name,mmsid,payload,format_params,title)
+        recipe=make_recipe(task_id,bag_name,mmsid,payload,format_params,title)
         logging.debug("Writing recipe to: {0}".format(recipefile))
         with open(recipefile,"w") as f:
             f.write(recipe.decode("UTF-8"))
