@@ -30,7 +30,7 @@ def get_mmsid(bag_name,path_to_bag=None):
     try:
         mmsid = bag_info['FIELD_EXTERNAL_DESCRIPTION'].split()[-1].strip()
         #print(type(mmsid))
-        print("bagname --- {0} = mmsid = {1}".format((bag_name,mmsid)))
+        print("bagname --- {0} = mmsid = {1}".format(bag_name,mmsid))
     except KeyError:
         logging.error("Cannot determine mmsid for bag from bag-info: {0}".format(bag_name))
         return None
