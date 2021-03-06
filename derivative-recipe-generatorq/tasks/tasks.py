@@ -105,7 +105,7 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
     resultpath = os.path.join(basedir, 'oulib_tasks/', task_id)
     os.makedirs(resultpath)
     s3 = boto3.resource('s3')
-    # hardcode bucket name as of now
+    # hardcode bucket name as of now , get from Env or Log an error if bucket name is not provided.
     bucket = s3.Bucket('ul-cc')
     bags_with_mmsids = OrderedDict()
     if type(bags) == 'str':
@@ -118,8 +118,8 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
         os.makedirs(src_input)
         os.makedirs(output)
         source_location = "{0}/{1}/data".format(s3_source, bag)
-        path_to_bag = "{0}/{1}/{2}/".format(mount_point,s3_source,bag)
-        mmsid =get_mmsid(bag,path_to_bag)
+        #path_to_bag = "{0}/{1}/{2}/".format(mount_point,s3_source,bag)
+        mmsid =get_mmsid(bag,None)
         if mmsid:
             bags_with_mmsids[bag]=OrderedDict()
             file_extensions = ["tif","TIFF","TIF","tiff"]
@@ -128,17 +128,24 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             #path_to_manifest_file = "{1}/{2}/manifest*.txt".format(s3_source,bag)
             #path_to_bag = "{0}/{1}/{2}/data/".format(mount_point, s3_source, bag)
             #for file in glob.glob(path_to_manifest_file):
+            status_flag=False
             for obj in bucket.objects.all():
                 if 'manifest-md5' in obj.key:
                     inpath = "{0}/{1}".format(src_input, obj.key.split('/')[-1])
                     s3.meta.client.download_file(bucket.name, obj.key, inpath)
                     if(getIntersection(inpath)):
                         logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
+                        #just logging but not capturing the details in unsuccessfull bag
+                        status_flag=True;
+                        break;
+
                 # this code is not required
                 # now try to use the filter one
                 else:
                     continue;
 
+            if status_flag:
+                continue
             """
             if os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)) and force_overwrite:
                 rmtree(outdir)
@@ -159,6 +166,7 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             bags_with_mmsids[bag]['mmsid'] = mmsid
         else:
             update_catalog(task_id,bag,format_params,mmsid)
+            shutil.rmtree(os.path.join(resultpath, 'src/', bag))
         shutil.rmtree(os.path.join(resultpath, 'src/', bag))
 
         # except Exception as e:
