@@ -166,7 +166,6 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             bags_with_mmsids[bag]['mmsid'] = mmsid
         else:
             update_catalog(task_id,bag,format_params,mmsid)
-            shutil.rmtree(os.path.join(resultpath, 'src/', bag))
         shutil.rmtree(os.path.join(resultpath, 'src/', bag))
 
         # except Exception as e:
