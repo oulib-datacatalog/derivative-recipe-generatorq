@@ -115,9 +115,11 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
         #code for boto3
         src_input = os.path.join(resultpath, 'src/', bag)
         output = os.path.join(resultpath, 'derivative/', bag)
+        print(output)
         os.makedirs(src_input)
         os.makedirs(output)
         source_location = "{0}/{1}/data".format(s3_source, bag)
+        filter_loc = "{0}/{1}".format(s3_source, bag)
         #path_to_bag = "{0}/{1}/{2}/".format(mount_point,s3_source,bag)
         mmsid =get_mmsid(bag,None)
         if mmsid:
@@ -130,7 +132,7 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             #path_to_bag = "{0}/{1}/{2}/data/".format(mount_point, s3_source, bag)
             #for file in glob.glob(path_to_manifest_file):
             status_flag=False
-            for obj in bucket.objects.all():
+            for obj in bucket.objects.filter(Prefix=filter_loc):
                 if 'manifest-md5.txt' == obj.key.split('/')[-1]:
                     inpath = "{0}/{1}".format(src_input, obj.key.split('/')[-1])
                     s3.meta.client.download_file(bucket.name, obj.key, inpath)
@@ -163,7 +165,7 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
                                                    _formatextension(outformat))
                     #outpath = '{0}/{1}/{2}/{3}/{4}.{5}'.format(mount_point,"derivative",bag,format_params,file.split('/')[-1].split('.')[0].lower(),_formatextension(outformat))
                     processimage(inpath=inpath,outpath=outpath,outformat=outformat,filter=filter,scale=scale,crop=crop)
-                    os.remove(inpath)
+                    #os.remove(inpath)
         else:
             update_catalog(task_id,bag,format_params,mmsid)
         #shutil.rmtree(os.path.join(resultpath, 'src/', bag))
