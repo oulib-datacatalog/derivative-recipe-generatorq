@@ -122,6 +122,7 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
         mmsid =get_mmsid(bag,None)
         if mmsid:
             bags_with_mmsids[bag]=OrderedDict()
+            bags_with_mmsids[bag]['mmsid'] = mmsid
             file_extensions = ["tif","TIFF","TIF","tiff"]
             #file_paths=[]
             # get the filename and then download it and search.
@@ -130,7 +131,7 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             #for file in glob.glob(path_to_manifest_file):
             status_flag=False
             for obj in bucket.objects.all():
-                if 'manifest-md5' in obj.key:
+                if 'manifest-md5.txt' == obj.key.split('/')[-1]:
                     inpath = "{0}/{1}".format(src_input, obj.key.split('/')[-1])
                     s3.meta.client.download_file(bucket.name, obj.key, inpath)
                     if(getIntersection(inpath)):
@@ -162,11 +163,10 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
                                                    _formatextension(outformat))
                     #outpath = '{0}/{1}/{2}/{3}/{4}.{5}'.format(mount_point,"derivative",bag,format_params,file.split('/')[-1].split('.')[0].lower(),_formatextension(outformat))
                     processimage(inpath=inpath,outpath=outpath,outformat=outformat,filter=filter,scale=scale,crop=crop)
-                os.remove(inpath)
-            bags_with_mmsids[bag]['mmsid'] = mmsid
+                    os.remove(inpath)
         else:
             update_catalog(task_id,bag,format_params,mmsid)
-        shutil.rmtree(os.path.join(resultpath, 'src/', bag))
+        #shutil.rmtree(os.path.join(resultpath, 'src/', bag))
 
         # except Exception as e:
         #     logging.error(e)
