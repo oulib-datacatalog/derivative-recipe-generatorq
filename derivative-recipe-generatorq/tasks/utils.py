@@ -116,7 +116,7 @@ def get_bib_record(mmsid):
     """
     url = "https://api-na.hosted.exlibrisgroup.com/almaws/v1/bibs/{0}?expand=None&apikey={1}"
 
-    apikey = os.environ.get('ALMA_KEY')
+    apikey = os.environ.get('ALMA_READ_TOKEN')
     if not apikey:
         logging.error("Could not get Alma key")
         return None

@@ -290,11 +290,13 @@ def process_recipe(derivative_args,rmlocal=True):
         bagpath = "{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id, bag_name)
         logging.info("Accessing bag at: {0}".format(bagpath))
         for filepath in iglob("{0}/*.*".format(bagpath)):
+            print(filepath)
             filename = filepath.split('/')[-1].lower()
             s3_key = "{0}/{1}/{2}/{3}".format(s3_destination, bag_name, format_params, filename)
             logging.info("Saving {0} to {1}".format(filename, s3_key))
             s3.meta.client.upload_file(filepath, bucket.name, s3_key)
         for filepath in iglob("{0}/data/*.*".format(bagpath)):
+            print(filepath)
             filename = filepath.split('/')[-1].lower()
             s3_key = "{0}/{1}/{2}/data/{3}".format(s3_destination, bag_name, format_params, filename)
             logging.info("Saving {0} to {1}".format(filename, s3_key))
@@ -306,8 +308,8 @@ def process_recipe(derivative_args,rmlocal=True):
            status_dict["unsuccessful_bags"].append(bag_name)
         else:
             status_dict["successful_bags"].append(bag_name)
-        if rmlocal is True:
-            rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id,bag_name))
+        # if rmlocal is True:
+        #     rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id,bag_name))
     return "Derivative-Recipe stats : {0}".format(str(status_dict))
 
 @task
