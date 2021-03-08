@@ -161,11 +161,11 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
                 if filename.split('.')[-1].lower() in file_extensions:
                     inpath = "{0}/{1}".format(src_input, filename.split('/')[-1])
                     s3.meta.client.download_file(bucket.name, filename, inpath)
-                    outpath = "{0}/{1}.{2}".format(output, filename.split('/')[-1].split('.')[0].lower(),
+                    outpath = "{0}/{1}/{2}.{3}".format(output,format_params,filename.split('/')[-1].split('.')[0].lower(),
                                                    _formatextension(outformat))
                     #outpath = '{0}/{1}/{2}/{3}/{4}.{5}'.format(mount_point,"derivative",bag,format_params,file.split('/')[-1].split('.')[0].lower(),_formatextension(outformat))
                     processimage(inpath=inpath,outpath=outpath,outformat=outformat,filter=filter,scale=scale,crop=crop)
-                    #os.remove(inpath)
+                    os.remove(inpath)
         else:
             update_catalog(task_id,bag,format_params,mmsid)
         #shutil.rmtree(os.path.join(resultpath, 'src/', bag))
