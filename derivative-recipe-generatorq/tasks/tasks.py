@@ -168,7 +168,7 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
                     os.remove(inpath)
         else:
             update_catalog(task_id,bag,format_params,mmsid)
-        #shutil.rmtree(os.path.join(resultpath, 'src/', bag))
+        shutil.rmtree(os.path.join(resultpath, 'src/', bag))
 
         # except Exception as e:
         #     logging.error(e)
@@ -308,8 +308,8 @@ def process_recipe(derivative_args,rmlocal=True):
            status_dict["unsuccessful_bags"].append(bag_name)
         else:
             status_dict["successful_bags"].append(bag_name)
-        # if rmlocal is True:
-        #     rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id,bag_name))
+        if rmlocal is True:
+            rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id,bag_name))
     return "Derivative-Recipe stats : {0}".format(str(status_dict))
 
 @task
