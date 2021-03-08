@@ -287,7 +287,7 @@ def process_recipe(derivative_args,rmlocal=True):
            continue
         bag_derivative(task_id,bag_name,format_params)
         recipe_file_creation(task_id,bag_name,mmsid,format_params)
-        bagpath = "{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id, bag_name)
+        bagpath = "{0}/oulib_tasks/{1}/derivative/{2}/{3}".format(basedir, task_id, bag_name,format_params)
         logging.info("Accessing bag at: {0}".format(bagpath))
         for filepath in iglob("{0}/*.*".format(bagpath)):
             print(filepath)
