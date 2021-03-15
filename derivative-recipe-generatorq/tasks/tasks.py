@@ -161,7 +161,7 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             print("Files names ==========")
             print(files)
             print("======================")
-            if len(files) == len(set(files)):
+            if len(files) != len(set(files)):
                 logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
                 #FIXME: store the failed bag_names , include the reason for failure as well
                 status_flag=True;
@@ -302,6 +302,7 @@ def process_recipe(derivative_args,rmlocal=True):
     """
     s3_bucket = 'ul-cc'
     s3_destination = 'derivative'
+    derivative_args = json.loads(derivative_args)
     bags = derivative_args.get('bags') #bags = { "bagname1" : { "mmsid": value} , "bagName2":{"mmsid":value}, ..}
     format_params = derivative_args.get('format_params')
     task_id = derivative_args.get('task_id')
