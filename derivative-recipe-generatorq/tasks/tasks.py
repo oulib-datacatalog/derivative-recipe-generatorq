@@ -39,7 +39,7 @@ basedir = "/data/web_data/static"
 bagList=[]
 
 def getAllBags():
-    response = requests.get('{0}/catalog/data/catalog/digital_objects/?query={{"filter":{{"department":"DigiLab","project":{{"$ne":"private"}},"locations.s3.exists":{{"$eq":true}},"derivatives.jpeg_040_antialias.recipe":{{"$exists":false,"$error":ne}}}}}}&format=json&page_size=0'.format(api_url))
+    response = requests.get('{0}/catalog/data/catalog/digital_objects/?action=distinct&field=bag&query={{"filter":{{"department":"DigiLab","project":{{"$ne":"private"}},"locations.s3.exists":{{"$eq":true}},"derivatives.jpeg_040_antialias.recipe":{{"$exists":false,"$error":ne}}}}}}&format=json&page_size=0'.format(api_url))
     jobj = response.json()
     results=jobj.get('results')
     for obj in results:
@@ -65,7 +65,7 @@ def automate(outformat,filter,scale=None,crop=None,force_overwrite=False,bag=Non
         result = chain(read_source_update_derivative.s(bag, "source", "derivative", outformat, filter, scale,crop,force_overwrite),
                        process_recipe.s())
         result.delay()
-    return "automate kicked off"
+    return ["automate kicked off"]
 
 def listpagefiles(task_id,bag_name, paramstring):
     """
@@ -79,11 +79,11 @@ def listpagefiles(task_id,bag_name, paramstring):
     path=_get_path(task_id,bag_name, paramstring)
     recipe_json = os.path.join(path,filename)
     with open(recipe_json,"r") as f:
-        recipe =  loads(f.read())
+        recipe = loads(f.read())
     return [page['file'] for page in recipe['recipe']['pages']]
 
 @task(bind=True)
-def read_source_update_derivative(self,bags,s3_source="source",s3_destination="derivative",outformat="TIFF",filter='ANTIALIAS',scale=None, crop=None,force_overwrite=False):
+def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",s3_destination="derivative",outformat="TIFF",filter='ANTIALIAS',scale=None, crop=None,force_overwrite=False):
     """
 
     This function is the starting function of the workflow used for derivative generation of the files.
@@ -107,7 +107,8 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
     os.makedirs(resultpath)
     s3 = boto3.resource('s3')
     #FIXME: hardcode bucket name as of now , get from Env or Log an error if bucket name is not provided.
-    bucket_name=os.environ.get('AWS_BUCKET_NAME','ul-bagit')
+    if bucket_name is None:
+        bucket_name=os.environ.get('AWS_BUCKET_NAME','ul-bagit')
     bucket = s3.Bucket(bucket_name)
     bags_with_mmsids = OrderedDict()
     bags_status=OrderedDict()
@@ -173,13 +174,13 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
                 continue
             for obj in bucket.objects.filter(Prefix=source_location):
                 filename = obj.key;
-                if filename.split('.')[-2][-4:].lower() == 'orig':
-                    # skip files similar to 001_orig.tif, 001.orig.tif, etc.
+                if re.search("(original|orig)\.\w{3,4}$", filename, re.IGNORECASE):
+                    # skip files similar to 001_orig.tif, 001.orig.tif, 001_Original.tiff, 001.original.jpg,  etc.
                     continue
-                if filename.split('/')[-1][0] == '.':
+                if re.search("^\.", filename):
                     # skip files starting with a period
                     continue
-                if filename.split('.')[-1].lower() in file_extensions:
+                if re.search("(tif|tiff)$", filename, re.IGNORECASE):
                     inpath = "{0}/{1}".format(src_input, filename.split('/')[-1])
                     try:
                         s3.meta.client.download_file(bucket.name, filename, inpath)
@@ -190,7 +191,9 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
                     processimage(inpath=inpath,outpath=outpath,outformat=outformat,filter=filter,scale=scale,crop=crop)
                     os.remove(inpath)
         else:
-            update_catalog(task_id,bag,format_params,mmsid)
+            status=update_catalog(task_id,bag,format_params,mmsid)
+            if (not status):
+                logging.error("The data of the bag - {0} not updated in catalog".format(bag))
             status_bag = defaultdict()
             status_bag["name"] = bag
             status_bag["reason"] = "No mmsid found"
@@ -394,8 +397,6 @@ def recipe_file_creation(task_id,bag_name,mmsid,format_params,title=None):
         logging.debug("Writing recipe to: {0}".format(recipefile))
         with open(recipefile,"w") as f:
             f.write(recipe.decode("UTF-8"))
-        #FIXME: Check this if we need to update manifests
-        #bag.save(manifests=True)
         bag.save()
     except bagit.BagError:
         logging.debug("Not a bag: {0}".format(path))
