@@ -12,8 +12,9 @@ from .derivative_utils import _params_as_string,_formatextension,_processimage
 from .recipe_utils import _get_path
 from .recipe_utils import *
 import logging
-import boto3,shutil
-
+import boto3,botocore,shutil
+import re
+from botocore.exceptions import ClientError
 
 
 
@@ -26,7 +27,6 @@ assert str(repoUUID) == "eb0ecf41-a457-5220-893a-08b7604b7110"
 app = Celery()
 app.config_from_object(celeryconfig)
 
-mount_point="/mnt"
 ou_derivative_bag_url = "https://bag.ou.edu/derivative"
 recipe_url = ou_derivative_bag_url + "/{0}/{1}/{2}.json"
 base_url = "https://cc.lib.ou.edu"
@@ -105,9 +105,13 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
     resultpath = os.path.join(basedir, 'oulib_tasks/', task_id)
     os.makedirs(resultpath)
     s3 = boto3.resource('s3')
-    # hardcode bucket name as of now , get from Env or Log an error if bucket name is not provided.
-    bucket = s3.Bucket('ul-cc')
+    #FIXME: hardcode bucket name as of now , get from Env or Log an error if bucket name is not provided.
+    bucket_name=os.environ.get('AWS_BUCKET_NAME','ul-bagit')
+    bucket = s3.Bucket(bucket_name)
     bags_with_mmsids = OrderedDict()
+    bags_status=OrderedDict()
+    bags_status["Failed"] = []
+    bags_status["Success"] = []
     if type(bags) == 'str':
         bags = [bags]
     for bag in bags:
@@ -120,61 +124,69 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
         os.makedirs(output)
         source_location = "{0}/{1}/data".format(s3_source, bag)
         filter_loc = "{0}/{1}".format(s3_source, bag)
-        #path_to_bag = "{0}/{1}/{2}/".format(mount_point,s3_source,bag)
-        mmsid =get_mmsid(bag,None)
+        mmsid =get_mmsid(bag,bucket_name)
         if mmsid:
             bags_with_mmsids[bag]=OrderedDict()
             bags_with_mmsids[bag]['mmsid'] = mmsid
             file_extensions = ["tif","TIFF","TIF","tiff"]
-            #file_paths=[]
-            # get the filename and then download it and search.
-            #path_to_manifest_file = "{1}/{2}/manifest*.txt".format(s3_source,bag)
-            #path_to_bag = "{0}/{1}/{2}/data/".format(mount_point, s3_source, bag)
-            #for file in glob.glob(path_to_manifest_file):
+
+            # remove the manifest way and check if the ambiguous using ambiguity.
+            pattern_for_matching_manifests = re.compile("^manifest-[\w]*.txt")
             status_flag=False
             for obj in bucket.objects.filter(Prefix=filter_loc):
-                if 'manifest-md5.txt' == obj.key.split('/')[-1]:
-                    inpath = "{0}/{1}".format(src_input, obj.key.split('/')[-1])
-                    s3.meta.client.download_file(bucket.name, obj.key, inpath)
+                print("Filter location ======== {0}".format(obj))
+                filename = obj.key.split('/')[-1]
+                matched_pattern=pattern_for_matching_manifests.match(filename).group()
+                if matched_pattern is not None:
+                    inpath = "{0}/{1}".format(src_input, filename)
+                    try:
+                        s3.meta.client.download_file(bucket.name, obj.key, inpath)
+                    except ClientError as e:
+                        logging.error(e)
                     if(getIntersection(inpath)):
                         logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
                         #just logging but not capturing the details in unsuccessfull bag
+
+                        #FIXME: store the failed bag_names , include the reason for failure as well
                         status_flag=True;
-                        break;
-
-                # this code is not required
-                # now try to use the filter one
-                else:
-                    continue;
-
+                        status_bag = defaultdict()
+                        status_bag["name"] =bag
+                        status_bag["reason"] = "Conflict in file names (eg. 001.tif , 001.tiff)"
+                        bags_status["Failed"].append(status_bag)
+                        break
             if status_flag:
                 continue
-            """
-            if os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)) and force_overwrite:
-                rmtree(outdir)
-            if os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)) and not force_overwrite:
-                raise Exception("derivative already exists and force_overwrite is set to false")
-            if not os.path.exists("{0}/derivative/{1}/{2}".format(mount_point, bag, format_params)):
-                os.makedirs(outdir)"""
             for obj in bucket.objects.filter(Prefix=source_location):
                 filename = obj.key;
+                if filename.split('.')[-2][-4:].lower() == 'orig':
+                    # skip files similar to 001_orig.tif, 001.orig.tif, etc.
+                    continue
+                if filename.split('/')[-1][0] == '.':
+                    # skip files starting with a period
+                    continue
                 if filename.split('.')[-1].lower() in file_extensions:
                     inpath = "{0}/{1}".format(src_input, filename.split('/')[-1])
-                    s3.meta.client.download_file(bucket.name, filename, inpath)
+                    try:
+                        s3.meta.client.download_file(bucket.name, filename, inpath)
+                    except ClientError as e:
+                        logging.error(e)
                     outpath = "{0}/{1}.{2}".format(output,filename.split('/')[-1].split('.')[0].lower(),
                                                    _formatextension(outformat))
-                    #outpath = '{0}/{1}/{2}/{3}/{4}.{5}'.format(mount_point,"derivative",bag,format_params,file.split('/')[-1].split('.')[0].lower(),_formatextension(outformat))
                     processimage(inpath=inpath,outpath=outpath,outformat=outformat,filter=filter,scale=scale,crop=crop)
                     os.remove(inpath)
         else:
             update_catalog(task_id,bag,format_params,mmsid)
+            status_bag = defaultdict()
+            status_bag["name"] = bag
+            status_bag["reason"] = "No mmsid found"
+            bags_status["Failed"].append(status_bag)
         shutil.rmtree(os.path.join(resultpath, 'src/', bag))
 
         # except Exception as e:
         #     logging.error(e)
         #     logging.error("handled exception here for - - {0}".format(bag))
     return {"s3_destination": s3_destination,"task_id":task_id,
-            "bags":bags_with_mmsids,"format_params":format_params}
+            "bags":bags_with_mmsids,"format_params":format_params,"bags_status":bags_status}
 
 def getIntersection(file):
     """
@@ -278,13 +290,16 @@ def process_recipe(derivative_args,rmlocal=True):
     bags = derivative_args.get('bags') #bags = { "bagname1" : { "mmsid": value} , "bagName2":{"mmsid":value}, ..}
     format_params = derivative_args.get('format_params')
     task_id = derivative_args.get('task_id')
-    status_dict = defaultdict(list)
+    bags_status=derivative_args.get('bags_status')
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(s3_bucket)
     for bag_name,mmsid in bags.items():
         if not mmsid:
-           status_dict["unsuccessful_bags"].append(bag_name)
-           continue
+            status_bag = defaultdict()
+            status_bag["name"] = bag_name
+            status_bag["reason"] = "No mmsid found"
+            bags_status["Failed"].append(status_bag)
+            continue
         bag_derivative(task_id,bag_name,format_params)
         recipe_file_creation(task_id,bag_name,mmsid,format_params)
         bagpath = "{0}/oulib_tasks/{1}/derivative/{2}/{3}".format(basedir, task_id, bag_name,format_params)
@@ -294,13 +309,19 @@ def process_recipe(derivative_args,rmlocal=True):
             filename = filepath.split('/')[-1].lower()
             s3_key = "{0}/{1}/{2}/{3}".format(s3_destination, bag_name, format_params, filename)
             logging.info("Saving {0} to {1}".format(filename, s3_key))
-            s3.meta.client.upload_file(filepath, bucket.name, s3_key)
+            try:
+                s3.meta.client.upload_file(filepath, bucket.name, s3_key)
+            except ClientError as e:
+                logging.error(e)
         for filepath in iglob("{0}/data/*.*".format(bagpath)):
             print(filepath)
             filename = filepath.split('/')[-1].lower()
             s3_key = "{0}/{1}/{2}/data/{3}".format(s3_destination, bag_name, format_params, filename)
             logging.info("Saving {0} to {1}".format(filename, s3_key))
-            s3.meta.client.upload_file(filepath, bucket.name, s3_key)
+            try:
+                s3.meta.client.upload_file(filepath, bucket.name, s3_key)
+            except ClientError as e:
+                logging.error(e)
         status = update_catalog(task_id,bag_name,format_params,mmsid["mmsid"])
         if(not status):
            logging.error("The data of the bag - {0} not updated in catalog - "
@@ -354,6 +375,8 @@ def recipe_file_creation(task_id,bag_name,mmsid,format_params,title=None):
         logging.debug("Writing recipe to: {0}".format(recipefile))
         with open(recipefile,"w") as f:
             f.write(recipe.decode("UTF-8"))
+        #FIXME: Check this if we need to update manifests
+        #bag.save(manifests=True)
         bag.save()
     except bagit.BagError:
         logging.debug("Not a bag: {0}".format(path))
