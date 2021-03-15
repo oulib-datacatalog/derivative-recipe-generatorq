@@ -123,7 +123,7 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
         os.makedirs(src_input)
         os.makedirs(output)
         source_location = "{0}/{1}/data".format(s3_source, bag)
-        filter_loc = "{0}/{1}".format(s3_source, bag)
+        filter_loc = "{0}/{1}/{2}".format(s3_source, bag,"data")
         mmsid =get_mmsid(bag,bucket_name)
         if mmsid:
             bags_with_mmsids[bag]=OrderedDict()
@@ -133,27 +133,31 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             # remove the manifest way and check if the ambiguous using ambiguity.
             pattern_for_matching_manifests = re.compile("^manifest-[\w]*.txt")
             status_flag=False
+            files = []
             for obj in bucket.objects.filter(Prefix=filter_loc):
-                print("Filter location ======== {0}".bucket.objects.filter(Prefix=filter_loc))
-                filename = obj.key.split('/')[-1]
-                matched_pattern=pattern_for_matching_manifests.match(filename).group()
-                if matched_pattern is not None:
-                    inpath = "{0}/{1}".format(src_input, filename)
-                    try:
-                        s3.meta.client.download_file(bucket.name, obj.key, inpath)
-                    except ClientError as e:
-                        logging.error(e)
-                    if(getIntersection(inpath)):
-                        logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
-                        #just logging but not capturing the details in unsuccessfull bag
 
-                        #FIXME: store the failed bag_names , include the reason for failure as well
-                        status_flag=True;
-                        status_bag = defaultdict()
-                        status_bag["name"] =bag
-                        status_bag["reason"] = "Conflict in file names (eg. 001.tif , 001.tiff)"
-                        bags_status["Failed"].append(status_bag)
-                        break
+                files.append(obj.key.split('/')[-1])
+                # matched_pattern=pattern_for_matching_manifests.match(filename).group()
+                # if matched_pattern is not None:
+                #     inpath = "{0}/{1}".format(src_input, filename)
+                #     try:
+                #         s3.meta.client.download_file(bucket.name, obj.key, inpath)
+                #     except ClientError as e:
+                #         logging.error(e)
+                #     if(getIntersection(inpath)):
+                #         logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
+                #         #just logging but not capturing the details in unsuccessfull bag
+                #
+                #         #FIXME: store the failed bag_names , include the reason for failure as well
+                #         status_flag=True;
+                #         status_bag = defaultdict()
+                #         status_bag["name"] =bag
+                #         status_bag["reason"] = "Conflict in file names (eg. 001.tif , 001.tiff)"
+                #         bags_status["Failed"].append(status_bag)
+                #         break
+            print("Files names ==========")
+            print(files)
+            print("======================")
             if status_flag:
                 continue
             for obj in bucket.objects.filter(Prefix=source_location):
