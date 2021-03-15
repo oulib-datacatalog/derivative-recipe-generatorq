@@ -135,8 +135,9 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             status_flag=False
             files = []
             for obj in bucket.objects.filter(Prefix=filter_loc):
-
-                files.append(obj.key.split('/')[-1])
+                if obj.key.split('/')[-1].split('.')[-1] in file_extensions:
+                    print(obj.key.split('/')[-1])
+                    files.append(obj.key.split('/')[-1])
                 # matched_pattern=pattern_for_matching_manifests.match(filename).group()
                 # if matched_pattern is not None:
                 #     inpath = "{0}/{1}".format(src_input, filename)
@@ -330,12 +331,15 @@ def process_recipe(derivative_args,rmlocal=True):
         if(not status):
            logging.error("The data of the bag - {0} not updated in catalog - "
                          "May be the record is not found or something is failed".format(bag_name))
-           status_dict["unsuccessful_bags"].append(bag_name)
+           status_bag = defaultdict()
+           status_bag["name"] = bag_name
+           status_bag["reason"] = "The data of the bag not updated in catalog , May be the record is not found or something is failed"
+           bags_status["Failed"].append(status_bag)
         else:
-            status_dict["successful_bags"].append(bag_name)
+            status_bag["Success"].append(bag_name)
         if rmlocal is True:
             rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id,bag_name))
-    return "Derivative-Recipe stats : {0}".format(str(status_dict))
+    return "Derivative-Recipe stats : {0}".format(str(status_bag))
 
 @task
 def bag_derivative(task_id,bag_name,format_params,update_manifest=True):
