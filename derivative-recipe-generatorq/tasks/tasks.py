@@ -134,7 +134,7 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             pattern_for_matching_manifests = re.compile("^manifest-[\w]*.txt")
             status_flag=False
             for obj in bucket.objects.filter(Prefix=filter_loc):
-                print("Filter location ======== {0}".format(obj))
+                print("Filter location ======== {0}".bucket.objects.filter(Prefix=filter_loc))
                 filename = obj.key.split('/')[-1]
                 matched_pattern=pattern_for_matching_manifests.match(filename).group()
                 if matched_pattern is not None:
