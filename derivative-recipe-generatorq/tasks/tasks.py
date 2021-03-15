@@ -6,6 +6,7 @@ from glob import iglob
 from celery import Celery
 import celeryconfig
 from uuid import uuid5, NAMESPACE_DNS
+import json
 from shutil import rmtree
 import datetime
 from .derivative_utils import _params_as_string,_formatextension,_processimage
@@ -130,14 +131,15 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             bags_with_mmsids[bag]['mmsid'] = mmsid
             file_extensions = ["tif","TIFF","TIF","tiff"]
 
-            # remove the manifest way and check if the ambiguous using ambiguity.
-            pattern_for_matching_manifests = re.compile("^manifest-[\w]*.txt")
+            # # remove the manifest way and check if the ambiguous using ambiguity.
+            # pattern_for_matching_manifests = re.compile("^manifest-[\w]*.txt")
             status_flag=False
             files = []
             for obj in bucket.objects.filter(Prefix=filter_loc):
                 if obj.key.split('/')[-1].split('.')[-1] in file_extensions:
-                    print(obj.key.split('/')[-1])
-                    files.append(obj.key.split('/')[-1])
+                    #print(obj.key.split('/')[-1])
+                    files.append(obj.key.split('/')[-1].split('.')[0])
+
                 # matched_pattern=pattern_for_matching_manifests.match(filename).group()
                 # if matched_pattern is not None:
                 #     inpath = "{0}/{1}".format(src_input, filename)
@@ -159,6 +161,14 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
             print("Files names ==========")
             print(files)
             print("======================")
+            if len(files) == len(set(files)):
+                logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
+                #FIXME: store the failed bag_names , include the reason for failure as well
+                status_flag=True;
+                status_bag = defaultdict()
+                status_bag["name"] =bag
+                status_bag["reason"] = "Conflict in file names (eg. 001.tif , 001.tiff)"
+                bags_status["Failed"].append(status_bag)
             if status_flag:
                 continue
             for obj in bucket.objects.filter(Prefix=source_location):
@@ -190,8 +200,8 @@ def read_source_update_derivative(self,bags,s3_source="source",s3_destination="d
         # except Exception as e:
         #     logging.error(e)
         #     logging.error("handled exception here for - - {0}".format(bag))
-    return {"s3_destination": s3_destination,"task_id":task_id,
-            "bags":bags_with_mmsids,"format_params":format_params,"bags_status":bags_status}
+    return json.dumps({"s3_destination": s3_destination,"task_id":task_id,
+            "bags":bags_with_mmsids,"format_params":format_params,"bags_status":bags_status})
 
 def getIntersection(file):
     """
@@ -336,10 +346,10 @@ def process_recipe(derivative_args,rmlocal=True):
            status_bag["reason"] = "The data of the bag not updated in catalog , May be the record is not found or something is failed"
            bags_status["Failed"].append(status_bag)
         else:
-            status_bag["Success"].append(bag_name)
+            bags_status["Success"].append(bag_name)
         if rmlocal is True:
             rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id,bag_name))
-    return "Derivative-Recipe stats : {0}".format(str(status_bag))
+    return "Derivative-Recipe stats : {0}".format(str(bags_status))
 
 @task
 def bag_derivative(task_id,bag_name,format_params,update_manifest=True):
