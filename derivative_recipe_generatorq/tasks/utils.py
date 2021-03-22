@@ -22,6 +22,7 @@ def get_mmsid(bag_name,bucket_name="ul-bagit"):
     if mmsid:
         return mmsid[-1]
     s3 = boto3.resource('s3')
+    print("Bucket Name in get_mmsid - {0}".format(bucket_name))
     s3_key = "{0}/{1}/{2}".format('source', bag_name, 'bag-info.txt')
     recipe_obj = s3.Object(bucket_name, s3_key)
     bag_info = yaml.load(recipe_obj.get()['Body'].read())
