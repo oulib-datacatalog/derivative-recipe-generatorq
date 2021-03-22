@@ -17,16 +17,6 @@ import boto3,botocore,shutil
 import re
 from botocore.exceptions import ClientError
 
-try:
-    from celeryconfig import ALMA_KEY, ALMA_RW_KEY, ETD_NOTIFICATION_EMAIL, ALMA_NOTIFICATION_EMAIL, REST_ENDPOINT
-    from celeryconfig import IR_NOTIFICATION_EMAIL, QUEUE_NAME, DSPACE_BINARY, DSPACE_FQDN
-    import celeryconfig
-except ImportError:
-    ALMA_KEY = ALMA_RW_KEY = ETD_NOTIFICATION_EMAIL = ALMA_NOTIFICATION_EMAIL = REST_ENDPOINT = ""
-    IR_NOTIFICATION_EMAIL = QUEUE_NAME = DSPACE_BINARY = DSPACE_FQDN = ""
-    celeryconfig = None
-
-
 repoUUID = uuid5(NAMESPACE_DNS, 'repository.ou.edu')
 
 # Assert correct generation
@@ -117,6 +107,7 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
     #FIXME: hardcode bucket name as of now , get from Env or Log an error if bucket name is not provided.
     if bucket_name is None:
         bucket_name=os.environ.get('AWS_BUCKET_NAME','ul-bagit')
+    print("bucket-name == {0}".format(bucket_name))
     bucket = s3.Bucket(bucket_name)
     bags_with_mmsids = OrderedDict()
     bags_status=OrderedDict()
