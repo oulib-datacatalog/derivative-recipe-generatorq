@@ -115,6 +115,7 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
     bags_status["Success"] = []
     if type(bags) == 'str':
         bags = [bags]
+    print("Bags list === {0}".format(bags))
     for bag in bags:
         format_params = _params_as_string(outformat,filter,scale,crop)
         #code for boto3
@@ -304,7 +305,8 @@ def process_recipe(derivative_args,rmlocal=True):
     """
     s3_bucket = 'ul-cc'
     s3_destination = 'derivative'
-    derivative_args = json.loads(derivative_args)
+    if type(derivative_args) == 'str':
+        derivative_args = json.loads(derivative_args)
     bags = derivative_args.get('bags') #bags = { "bagname1" : { "mmsid": value} , "bagName2":{"mmsid":value}, ..}
     format_params = derivative_args.get('format_params')
     task_id = derivative_args.get('task_id')
