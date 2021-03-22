@@ -17,6 +17,14 @@ import boto3,botocore,shutil
 import re
 from botocore.exceptions import ClientError
 
+try:
+    from celeryconfig import ALMA_KEY, ALMA_RW_KEY, ETD_NOTIFICATION_EMAIL, ALMA_NOTIFICATION_EMAIL, REST_ENDPOINT
+    from celeryconfig import IR_NOTIFICATION_EMAIL, QUEUE_NAME, DSPACE_BINARY, DSPACE_FQDN
+    import celeryconfig
+except ImportError:
+    ALMA_KEY = ALMA_RW_KEY = ETD_NOTIFICATION_EMAIL = ALMA_NOTIFICATION_EMAIL = REST_ENDPOINT = ""
+    IR_NOTIFICATION_EMAIL = QUEUE_NAME = DSPACE_BINARY = DSPACE_FQDN = ""
+    celeryconfig = None
 
 
 repoUUID = uuid5(NAMESPACE_DNS, 'repository.ou.edu')
@@ -62,10 +70,10 @@ def automate(outformat,filter,scale=None,crop=None,force_overwrite=False,bag=Non
     #If bag is given is then kickoff separate chain.
 
     for bag in getSample():
-        result = chain(read_source_update_derivative.s(bag, "source", "derivative", outformat, filter, scale,crop,force_overwrite),
+        result = chain(read_source_update_derivative.s(bag,None,"source", "derivative", outformat, filter, scale,crop,force_overwrite),
                        process_recipe.s())
         result.delay()
-    return ["automate kicked off"]
+    return "automate kicked off"
 
 def listpagefiles(task_id,bag_name, paramstring):
     """
