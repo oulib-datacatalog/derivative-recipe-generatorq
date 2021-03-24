@@ -73,7 +73,9 @@ def add_test(x,y):
 
 @task
 def add_1(x,y):
-    return x+y
+
+    x = x+y
+    return x
 
 @task
 def add_2(y):
