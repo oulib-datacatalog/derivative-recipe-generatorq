@@ -16,6 +16,7 @@ import logging
 import boto3,botocore,shutil
 import re
 from botocore.exceptions import ClientError
+from celery import signature
 
 repoUUID = uuid5(NAMESPACE_DNS, 'repository.ou.edu')
 
@@ -67,7 +68,14 @@ def automate(outformat=None,filter=None,scale=None,crop=None,bag=None):
 
 @task
 def add_test(x,y):
-    result = chain(add_1.s(x,y),add_2.s())
+    task_1 = signature("add_1",
+                          kwargs={'x': x,
+                                  'y': y
+                                  })
+    # generate recipe files and process derivatives into bags
+    task_2 = signature("add_2")
+
+    result = chain(task_1 , task_2)
     result.delay()
     return "kicked off"
 
