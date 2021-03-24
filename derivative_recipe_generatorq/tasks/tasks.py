@@ -69,7 +69,7 @@ def automate(outformat=None,filter=None,scale=None,crop=None,bag=None):
 def add_test(x,y):
     result = chain(add_1.s(x,y),add_2.s())
     result.delay()
-
+    return "kicked off"
 
 @task
 def add_1(x,y):
