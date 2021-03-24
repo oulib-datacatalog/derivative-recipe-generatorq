@@ -60,7 +60,7 @@ def automate(outformat,filter,scale=None,crop=None,force_overwrite=False,bag=Non
     #If bag is given is then kickoff separate chain.
 
     #for bag in getSample():
-    result = chain(read_source_update_derivative.s("Abbati_1703",None,"source", "derivative", outformat, filter, scale,crop,force_overwrite),
+    result = chain(read_source_update_derivative.s("Abbati_1703",None,"source", "derivative", "JPEG", filter, scale,crop),
                        process_recipe.s())
     result.delay()
 
@@ -82,7 +82,7 @@ def listpagefiles(task_id,bag_name, paramstring):
     return [page['file'] for page in recipe['recipe']['pages']]
 
 @task(bind=True)
-def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",s3_destination="derivative",outformat="TIFF",filter='ANTIALIAS',scale=None, crop=None,force_overwrite=False):
+def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",s3_destination="derivative",outformat="TIFF",filter='ANTIALIAS',scale=None, crop=None):
     """
 
     This function is the starting function of the workflow used for derivative generation of the files.
@@ -114,7 +114,7 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
     bags_status=OrderedDict()
     bags_status["Failed"] = []
     bags_status["Success"] = []
-    if type(bags) == 'str':
+    if type(bags) == str:
         bags = [bags]
     print("Bags list === {0}".format(bags))
     for bag in bags:
@@ -205,7 +205,8 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
     {"s3_destination": s3_destination,"task_id":task_id,
             "bags":bags_with_mmsids,"format_params":format_params,"bags_status":bags_status}
     """
-    return "testing."
+    return {"s3_destination": s3_destination,"task_id":task_id,
+            "bags":bags_with_mmsids,"format_params":format_params,"bags_status":bags_status}
 
 @task
 def processimage(inpath, outpath, outformat="TIFF", filter="ANTIALIAS", scale=None, crop=None):
