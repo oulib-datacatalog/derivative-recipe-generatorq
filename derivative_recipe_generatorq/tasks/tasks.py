@@ -203,29 +203,8 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
         # except Exception as e:
         #     logging.error(e)
         #     logging.error("handled exception here for - - {0}".format(bag))
-    return json.dumps({"s3_destination": s3_destination,"task_id":task_id,
-            "bags":bags_with_mmsids,"format_params":format_params,"bags_status":bags_status})
-
-def getIntersection(file):
-    """
-    This method is used for knowing if their are any name conflicts inside the manifest file of each bag.
-    name conflict examples - [ 001.tif , 001.tiff] or [001.TIF , 001.tiff] or [001.TIFF , 001.tif] or [001.TIF , 001.TIFF]
-    :param file: manifest file of each bag.
-    :return: boolean true or false.
-    """
-    ListOfFileNames = []
-    with open(file, "r") as f:
-        lines = f.readlines();
-        for line in lines:
-            line = line.strip();
-            ListOfFileNames.append(line.split("/")[-1])
-    listOfTif = [name.split(".")[0] for name in ListOfFileNames if name.endswith(".tif") or name.endswith(".TIF")]
-    listOfTiff = [name.split(".")[0] for name in ListOfFileNames if name.endswith(".tiff") or name.endswith(".TIFF")]
-    intersectionList = list(set(listOfTiff) & set(listOfTif))
-    if(len(intersectionList) == 0):
-        return False;
-    else:
-        return True;
+    return {"s3_destination": s3_destination,"task_id":task_id,
+            "bags":bags_with_mmsids,"format_params":format_params,"bags_status":bags_status}
 
 @task
 def processimage(inpath, outpath, outformat="TIFF", filter="ANTIALIAS", scale=None, crop=None):
