@@ -9,6 +9,7 @@ import requests
 from collections import OrderedDict
 import os
 import boto3
+from botocore.exceptions import ClientError
 
 
 def get_mmsid(bag_name,bucket_name="ul-bagit"):
@@ -24,7 +25,11 @@ def get_mmsid(bag_name,bucket_name="ul-bagit"):
     s3 = boto3.resource('s3')
     print("Bucket Name in get_mmsid - {0}".format(bucket_name))
     s3_key = "{0}/{1}/{2}".format('source', bag_name, 'bag-info.txt')
-    recipe_obj = s3.Object(bucket_name, s3_key)
+    try:
+        recipe_obj = s3.Object(bucket_name, s3_key)
+    except ClientError as e:
+        logging.error(e)
+    #recipe_obj = s3.Object(bucket_name, s3_key)
     bag_info = yaml.load(recipe_obj.get()['Body'].read())
     try:
         mmsid = bag_info['FIELD_EXTERNAL_DESCRIPTION'].split()[-1].strip()

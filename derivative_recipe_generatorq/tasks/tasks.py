@@ -61,8 +61,8 @@ def automate(outformat=None,filter=None,scale=None,crop=None,bag=None):
 
     #for bag in getSample():
     result = chain(read_source_update_derivative.s("Abbati_1703",None,"source", "derivative", "JPEG", filter, scale,crop),
-                       process_recipe.s())
-    result.delay()
+                       process_recipe.s())()
+    result.get()
 
     return {"Successfully kicked off the chain":"done"}
 
