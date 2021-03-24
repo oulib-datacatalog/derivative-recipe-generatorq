@@ -63,7 +63,6 @@ def automate(outformat,filter,scale=None,crop=None,force_overwrite=False,bag=Non
         result = chain(read_source_update_derivative.s(bag,None,"source", "derivative", outformat, filter, scale,crop,force_overwrite),
                        process_recipe.s())
         result.delay()
-    return "automate kicked off"
 
 def listpagefiles(task_id,bag_name, paramstring):
     """
@@ -200,9 +199,6 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
             bags_status["Failed"].append(status_bag)
         shutil.rmtree(os.path.join(resultpath, 'src/', bag))
 
-        # except Exception as e:
-        #     logging.error(e)
-        #     logging.error("handled exception here for - - {0}".format(bag))
     return {"s3_destination": s3_destination,"task_id":task_id,
             "bags":bags_with_mmsids,"format_params":format_params,"bags_status":bags_status}
 
