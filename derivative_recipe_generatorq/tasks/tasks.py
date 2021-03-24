@@ -52,7 +52,7 @@ def getSample(size=4):
         return getAllBags()
 
 @task
-def automate(outformat,filter,scale=None,crop=None,force_overwrite=False,bag=None):
+def automate(outformat=None,filter=None,scale=None,crop=None,bag=None):
     """
     This automates the process of derivative creation.
     :return: string "kicked off or not"
