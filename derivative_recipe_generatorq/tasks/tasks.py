@@ -64,7 +64,7 @@ def automate(outformat=None,filter=None,scale=None,crop=None,bag=None):
                        process_recipe.s())
     result.delay()
 
-    return "Successfully kicked off the chain"
+    return {"Successfully kicked off the chain":"done"}
 
 def listpagefiles(task_id,bag_name, paramstring):
     """
