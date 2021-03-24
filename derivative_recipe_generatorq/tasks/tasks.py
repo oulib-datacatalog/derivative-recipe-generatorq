@@ -68,7 +68,7 @@ def automate(outformat=None,filter=None,scale=None,crop=None,bag=None):
 
 @task
 def add_test(x,y):
-    result = (add_1.s(x,y) ,add_2.s())()
+    result = (add_1.s(x,y) | add_2.s())()
     return "kicked off"
 
 @task
