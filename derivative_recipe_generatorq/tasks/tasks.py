@@ -329,7 +329,7 @@ def process_recipe(derivative_args,rmlocal=True):
             bags_status["Success"].append(bag_name)
         if rmlocal is True:
             rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id,bag_name))
-    return "Derivative-Recipe stats : {0}".format(str(bags_status))
+    return {"Derivative-Recipe stats":"{0}".format(str(bags_status))}
 
 @task
 def bag_derivative(task_id,bag_name,format_params,update_manifest=True):
