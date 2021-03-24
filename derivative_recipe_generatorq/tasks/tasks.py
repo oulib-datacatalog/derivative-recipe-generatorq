@@ -199,8 +199,11 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
             bags_status["Failed"].append(status_bag)
         shutil.rmtree(os.path.join(resultpath, 'src/', bag))
 
-    return {"s3_destination": s3_destination,"task_id":task_id,
+    """
+    {"s3_destination": s3_destination,"task_id":task_id,
             "bags":bags_with_mmsids,"format_params":format_params,"bags_status":bags_status}
+    """
+    return "testing."
 
 @task
 def processimage(inpath, outpath, outformat="TIFF", filter="ANTIALIAS", scale=None, crop=None):
