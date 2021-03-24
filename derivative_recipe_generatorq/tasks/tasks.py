@@ -60,9 +60,11 @@ def automate(outformat,filter,scale=None,crop=None,force_overwrite=False,bag=Non
     #If bag is given is then kickoff separate chain.
 
     #for bag in getSample():
-    result = chain(read_source_update_derivative.s('Abbati_1703',None,"source", "derivative", outformat, filter, scale,crop,force_overwrite),
+    result = chain(read_source_update_derivative.s("Abbati_1703",None,"source", "derivative", outformat, filter, scale,crop,force_overwrite),
                        process_recipe.s())
     result.delay()
+
+    return "Successfully kicked off the chain"
 
 def listpagefiles(task_id,bag_name, paramstring):
     """
