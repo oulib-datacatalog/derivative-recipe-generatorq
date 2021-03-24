@@ -64,6 +64,23 @@ def automate(outformat=None,filter=None,scale=None,crop=None,bag=None):
                        process_recipe.s())
     result.delay()
 
+
+@task
+def add_test(x,y):
+    result = chain(add_1.s(x,y),add_2.s(y))
+    result.delay()
+
+
+@task
+def add_1(x,y):
+    return x+y
+
+@task
+def add_2(y):
+    return y+25
+
+
+
 def listpagefiles(task_id,bag_name, paramstring):
     """
     This is a helper function which returns the list of pages.
