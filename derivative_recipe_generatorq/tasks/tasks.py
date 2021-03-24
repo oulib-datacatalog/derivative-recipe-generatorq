@@ -68,15 +68,8 @@ def automate(outformat=None,filter=None,scale=None,crop=None,bag=None):
 
 @task
 def add_test(x,y):
-    task_1 = signature("add_1",
-                          kwargs={'x': x,
-                                  'y': y
-                                  })
-    # generate recipe files and process derivatives into bags
-    task_2 = signature("add_2")
-
-    result = chain(task_1 , task_2)
-    result.delay()
+    #result = chain(add_1.s(x,y) ,add_2.s())
+    #result.delay()
     return "kicked off"
 
 @task
