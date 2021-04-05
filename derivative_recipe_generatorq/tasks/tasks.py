@@ -275,47 +275,49 @@ def process_recipe(derivative_args,rmlocal=True):
     bags_status=derivative_args.get('bags_status')
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(s3_bucket)
+    failed_bags = [bag.get("name") for bag in bags_status['Failed'] if bag.get("name") is not None]
     for bag_name,mmsid in bags.items():
-        if not mmsid:
-            status_bag = defaultdict()
-            status_bag["name"] = bag_name
-            status_bag["reason"] = "No mmsid found"
-            bags_status["Failed"].append(status_bag)
-            continue
-        bag_derivative(task_id,bag_name,format_params)
-        recipe_file_creation(task_id,bag_name,mmsid,format_params)
-        bagpath = "{0}/oulib_tasks/{1}/derivative/{2}/{3}".format(basedir, task_id, bag_name,format_params)
-        logging.info("Accessing bag at: {0}".format(bagpath))
-        for filepath in iglob("{0}/*.*".format(bagpath)):
-            print(filepath)
-            filename = filepath.split('/')[-1].lower()
-            s3_key = "{0}/{1}/{2}/{3}".format(s3_destination, bag_name, format_params, filename)
-            logging.info("Saving {0} to {1}".format(filename, s3_key))
-            try:
-                s3.meta.client.upload_file(filepath, bucket.name, s3_key)
-            except ClientError as e:
-                logging.error(e)
-        for filepath in iglob("{0}/data/*.*".format(bagpath)):
-            print(filepath)
-            filename = filepath.split('/')[-1].lower()
-            s3_key = "{0}/{1}/{2}/data/{3}".format(s3_destination, bag_name, format_params, filename)
-            logging.info("Saving {0} to {1}".format(filename, s3_key))
-            try:
-                s3.meta.client.upload_file(filepath, bucket.name, s3_key)
-            except ClientError as e:
-                logging.error(e)
-        status = update_catalog(task_id,bag_name,format_params,mmsid["mmsid"])
-        if(not status):
-           logging.error("The data of the bag - {0} not updated in catalog - "
-                         "May be the record is not found or something is failed".format(bag_name))
-           status_bag = defaultdict()
-           status_bag["name"] = bag_name
-           status_bag["reason"] = "The data of the bag not updated in catalog , May be the record is not found or something is failed"
-           bags_status["Failed"].append(status_bag)
-        else:
-            bags_status["Success"].append(bag_name)
-        if rmlocal is True:
-            rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id,bag_name))
+        if bag_name not in failed_bags:
+            if not mmsid:
+                status_bag = defaultdict()
+                status_bag["name"] = bag_name
+                status_bag["reason"] = "No mmsid found"
+                bags_status["Failed"].append(status_bag)
+                continue
+            bag_derivative(task_id,bag_name,format_params)
+            recipe_file_creation(task_id,bag_name,mmsid,format_params)
+            bagpath = "{0}/oulib_tasks/{1}/derivative/{2}/{3}".format(basedir, task_id, bag_name,format_params)
+            logging.info("Accessing bag at: {0}".format(bagpath))
+            for filepath in iglob("{0}/*.*".format(bagpath)):
+                print(filepath)
+                filename = filepath.split('/')[-1].lower()
+                s3_key = "{0}/{1}/{2}/{3}".format(s3_destination, bag_name, format_params, filename)
+                logging.info("Saving {0} to {1}".format(filename, s3_key))
+                try:
+                    s3.meta.client.upload_file(filepath, bucket.name, s3_key)
+                except ClientError as e:
+                    logging.error(e)
+            for filepath in iglob("{0}/data/*.*".format(bagpath)):
+                print(filepath)
+                filename = filepath.split('/')[-1].lower()
+                s3_key = "{0}/{1}/{2}/data/{3}".format(s3_destination, bag_name, format_params, filename)
+                logging.info("Saving {0} to {1}".format(filename, s3_key))
+                try:
+                    s3.meta.client.upload_file(filepath, bucket.name, s3_key)
+                except ClientError as e:
+                    logging.error(e)
+            status = update_catalog(task_id,bag_name,format_params,mmsid["mmsid"])
+            if(not status):
+               logging.error("The data of the bag - {0} not updated in catalog - "
+                             "May be the record is not found or something is failed".format(bag_name))
+               status_bag = defaultdict()
+               status_bag["name"] = bag_name
+               status_bag["reason"] = "The data of the bag not updated in catalog , May be the record is not found or something is failed"
+               bags_status["Failed"].append(status_bag)
+            else:
+                bags_status["Success"].append(bag_name)
+            if rmlocal is True:
+                rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id,bag_name))
     return {"Derivative-Recipe stats":"{0}".format(str(bags_status))}
 
 @task
