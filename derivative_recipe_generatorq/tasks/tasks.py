@@ -60,28 +60,10 @@ def automate(outformat=None,filter=None,scale=None,crop=None,bag=None):
     """
     #If bag is given is then kickoff separate chain.
 
-    #for bag in getSample():
-    result = chain(read_source_update_derivative.s("Abbati_1703",None,"source", "derivative", "JPEG", filter, scale,crop),
+    for bag in getSample():
+        result = chain(read_source_update_derivative.s(bag,None,"source", "derivative", "JPEG", filter, scale,crop),
                        process_recipe.s())
     result.delay()
-
-
-@task
-def add_test(x,y):
-    result = (add_1.s(x,y) | add_2.s())()
-    return "kicked off"
-
-@task
-def add_1(x,y):
-
-    x = x+y
-    return x
-
-@task
-def add_2(y):
-    return y+25
-
-
 
 def listpagefiles(task_id,bag_name, paramstring):
     """
@@ -144,7 +126,7 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
         os.makedirs(output)
         source_location = "{0}/{1}/data".format(s3_source, bag)
         filter_loc = "{0}/{1}/{2}".format(s3_source, bag,"data")
-        mmsid =get_mmsid(bag,bucket_name)
+        mmsid =get_mmsid(bag)
         if mmsid:
             bags_with_mmsids[bag]=OrderedDict()
             bags_with_mmsids[bag]['mmsid'] = mmsid
@@ -158,25 +140,6 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
                 if obj.key.split('/')[-1].split('.')[-1] in file_extensions:
                     #print(obj.key.split('/')[-1])
                     files.append(obj.key.split('/')[-1].split('.')[0])
-
-                # matched_pattern=pattern_for_matching_manifests.match(filename).group()
-                # if matched_pattern is not None:
-                #     inpath = "{0}/{1}".format(src_input, filename)
-                #     try:
-                #         s3.meta.client.download_file(bucket.name, obj.key, inpath)
-                #     except ClientError as e:
-                #         logging.error(e)
-                #     if(getIntersection(inpath)):
-                #         logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
-                #         #just logging but not capturing the details in unsuccessfull bag
-                #
-                #         #FIXME: store the failed bag_names , include the reason for failure as well
-                #         status_flag=True;
-                #         status_bag = defaultdict()
-                #         status_bag["name"] =bag
-                #         status_bag["reason"] = "Conflict in file names (eg. 001.tif , 001.tiff)"
-                #         bags_status["Failed"].append(status_bag)
-                #         break
             print("Files names ==========")
             print(files)
             print("======================")
@@ -195,7 +158,8 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
                 if re.search("(original|orig)\.\w{3,4}$", filename, re.IGNORECASE):
                     # skip files similar to 001_orig.tif, 001.orig.tif, 001_Original.tiff, 001.original.jpg,  etc.
                     continue
-                if re.search("^\.", filename):
+                #FIXME: Check this code for checking the filenames if it starts with '.'
+                if re.search("^\.", filename.split("/")[-1]):
                     # skip files starting with a period
                     continue
                 if re.search("(tif|tiff)$", filename, re.IGNORECASE):

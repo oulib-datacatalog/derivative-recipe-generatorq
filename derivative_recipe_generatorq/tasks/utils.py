@@ -10,37 +10,110 @@ from collections import OrderedDict
 import os
 import boto3
 from botocore.exceptions import ClientError
+from configs import base_url, alma_api_url, repository_url, bag_gateway_url, error_bags_url
+from configs import digital_objects_url
+from json import dumps
 
+def _get_mmsid_bag_name(bag):
+    """ parse mmsid from end of bag name """
+    mmsid = bag.split("_")[-1].strip()  # using bag name formatting: 1990_somebag_0987654321
+    if re.match("^[0-9]{8,19}$", mmsid):  # check that we have an mmsid like value
+        return mmsid
+    return None
 
-def get_mmsid(bag_name,bucket_name="ul-bagit"):
-    """
+def _get_mmsid_catalog(bag):
+    """ fetch mmsid from data catalog metadata """
+    catalog = searchcatalog(bag)
+    return catalog.get("mmsid")
 
-    :param bag_name: name of the bag
-    :param bucket_name: name of the s3 bucket
-    :return: mmsid or None
-    """
-    mmsid = re.findall("(?<!^)(?<!\d)\d{8,19}(?!\d)", bag_name)
-    if mmsid:
-        return mmsid[-1]
+def searchcatalog(bag):
+    query = {"filter": {"bag": bag}}
+    search_url = f"{digital_objects_url}?format=json&query={dumps(query)}"
+    resp = requests.get(search_url)
+    catalogitems = resp.json()
+    if catalogitems['count']:
+        return catalogitems['results'][0]
+
+def _get_mmsid_bag_info(bag):
     s3 = boto3.resource('s3')
+
+    #FIXME: Change this bucket-name
+    bucket_name = "ul-cc"
     print("Bucket Name in get_mmsid - {0}".format(bucket_name))
-    s3_key = "{0}/{1}/{2}".format('source', bag_name, 'bag-info.txt')
+    s3_key = "{0}/{1}/{2}".format('source', bag, 'bag-info.txt')
     try:
         recipe_obj = s3.Object(bucket_name, s3_key)
     except ClientError as e:
         logging.error(e)
-    #recipe_obj = s3.Object(bucket_name, s3_key)
+    # recipe_obj = s3.Object(bucket_name, s3_key)
     bag_info = yaml.load(recipe_obj.get()['Body'].read())
     try:
         mmsid = bag_info['FIELD_EXTERNAL_DESCRIPTION'].split()[-1].strip()
-        print("bagname --- {0} = mmsid = {1}".format(bag_name,mmsid))
+        print("bagname --- {0} = mmsid = {1}".format(bag, mmsid))
     except KeyError:
-        logging.error("Cannot determine mmsid for bag from bag-info: {0}".format(bag_name))
+        logging.error("Cannot determine mmsid for bag from bag-info: {0}".format(bag))
         return None
     if re.match("^[0-9]{8,19}$", mmsid):  # check that we have an mmsid like value
-        print("The matched value is=",re.match("^[0-9]{8,19}$", mmsid))
+        print("The matched value is=", re.match("^[0-9]{8,19}$", mmsid))
         return mmsid
     return None
+
+def _get_mmsid_marc_recipe(bag):
+    """ parse mmsid from marc xml linked in recipe file """
+    recipe_url = guess_recipe_url(bag)
+    resp_json = requests.get(recipe_url).json()
+    marc_url = resp_json['recipe']['metadata']['marcxml']
+    resp = requests.get(marc_url).content
+    tree = ET.fromstring(resp)
+    found_elements = tree.xpath(
+        '//ns:record/ns:controlfield[@tag=001]',
+        namespaces={"ns": "http://www.loc.gov/MARC21/slim"}
+    )
+    for element in found_elements:
+        mmsid = element.text
+        if re.match("^[0-9]{8,19}$", mmsid):
+            return mmsid
+    return None
+
+def guess_recipe_url(bag):
+    """ generate recipe url based on hard coded derivative path """
+    return f"{bag_gateway_url}/derivative/{bag}/jpeg_040_antialias/{bag.lower()}.json"
+
+def get_mmsid(bag_name):
+    """
+
+    :param bag_name: name of the bag
+    :return: mmsid or None
+    """
+
+    for func in [_get_mmsid_bag_name, _get_mmsid_catalog, _get_mmsid_bag_info, _get_mmsid_marc_recipe]:
+        mmsid = func(bag_name)
+        if mmsid:
+            return mmsid
+    return None
+
+    # mmsid = re.findall("(?<!^)(?<!\d)\d{8,19}(?!\d)", bag_name)
+    # if mmsid:
+    #     return mmsid[-1]
+    # s3 = boto3.resource('s3')
+    # print("Bucket Name in get_mmsid - {0}".format(bucket_name))
+    # s3_key = "{0}/{1}/{2}".format('source', bag_name, 'bag-info.txt')
+    # try:
+    #     recipe_obj = s3.Object(bucket_name, s3_key)
+    # except ClientError as e:
+    #     logging.error(e)
+    # #recipe_obj = s3.Object(bucket_name, s3_key)
+    # bag_info = yaml.load(recipe_obj.get()['Body'].read())
+    # try:
+    #     mmsid = bag_info['FIELD_EXTERNAL_DESCRIPTION'].split()[-1].strip()
+    #     print("bagname --- {0} = mmsid = {1}".format(bag_name,mmsid))
+    # except KeyError:
+    #     logging.error("Cannot determine mmsid for bag from bag-info: {0}".format(bag_name))
+    #     return None
+    # if re.match("^[0-9]{8,19}$", mmsid):  # check that we have an mmsid like value
+    #     print("The matched value is=",re.match("^[0-9]{8,19}$", mmsid))
+    #     return mmsid
+    # return None
 
 def get_marc_datafield(tag_id, xml_tree):
     try:
