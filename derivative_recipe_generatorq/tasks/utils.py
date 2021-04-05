@@ -10,8 +10,8 @@ from collections import OrderedDict
 import os
 import boto3
 from botocore.exceptions import ClientError
-from configs import base_url, alma_api_url, repository_url, bag_gateway_url, error_bags_url
-from configs import digital_objects_url
+from .configs import base_url, alma_api_url, repository_url, bag_gateway_url, error_bags_url
+from .configs import digital_objects_url
 from json import dumps
 
 def _get_mmsid_bag_name(bag):
