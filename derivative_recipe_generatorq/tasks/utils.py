@@ -81,7 +81,7 @@ def guess_recipe_url(bag):
 
 def get_mmsid(bag_name):
     """
-
+    this function is used to get the mmsid of the bag
     :param bag_name: name of the bag
     :return: mmsid or None
     """
@@ -91,29 +91,6 @@ def get_mmsid(bag_name):
         if mmsid:
             return mmsid
     return None
-
-    # mmsid = re.findall("(?<!^)(?<!\d)\d{8,19}(?!\d)", bag_name)
-    # if mmsid:
-    #     return mmsid[-1]
-    # s3 = boto3.resource('s3')
-    # print("Bucket Name in get_mmsid - {0}".format(bucket_name))
-    # s3_key = "{0}/{1}/{2}".format('source', bag_name, 'bag-info.txt')
-    # try:
-    #     recipe_obj = s3.Object(bucket_name, s3_key)
-    # except ClientError as e:
-    #     logging.error(e)
-    # #recipe_obj = s3.Object(bucket_name, s3_key)
-    # bag_info = yaml.load(recipe_obj.get()['Body'].read())
-    # try:
-    #     mmsid = bag_info['FIELD_EXTERNAL_DESCRIPTION'].split()[-1].strip()
-    #     print("bagname --- {0} = mmsid = {1}".format(bag_name,mmsid))
-    # except KeyError:
-    #     logging.error("Cannot determine mmsid for bag from bag-info: {0}".format(bag_name))
-    #     return None
-    # if re.match("^[0-9]{8,19}$", mmsid):  # check that we have an mmsid like value
-    #     print("The matched value is=",re.match("^[0-9]{8,19}$", mmsid))
-    #     return mmsid
-    # return None
 
 def get_marc_datafield(tag_id, xml_tree):
     try:

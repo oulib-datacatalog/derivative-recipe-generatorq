@@ -88,15 +88,13 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
 
     :args
     bags = List containing bagnames eg : [bag1,bag2...]
+    bucket_name = name of the s3 bucket
     s3_source = source directory.
     s3_destination : destionation directory.
     outformat = "TIFF or JPEG"
     filter = "ANTALIAS" - filter type of the image.
     scale = At what scale do you need the reduction of the size - eg 0.40 or 0.20
     crop = size in which the image needs to be cropped, Provide it as a list - eg - [10,10,20,40]
-    force_overwrite = overwrite the derivative bag already if it was already created with the
-    previous paramaters. -eg: true.
-
     :returns dictionary with s3_destionation , bags_with_mmsid:{} , format_params as keys and there values.
     """
 
@@ -132,13 +130,10 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
             bags_with_mmsids[bag]['mmsid'] = mmsid
             file_extensions = ["tif","TIFF","TIF","tiff"]
 
-            # # remove the manifest way and check if the ambiguous using ambiguity.
-            # pattern_for_matching_manifests = re.compile("^manifest-[\w]*.txt")
             status_flag=False
             files = []
             for obj in bucket.objects.filter(Prefix=filter_loc):
                 if obj.key.split('/')[-1].split('.')[-1] in file_extensions:
-                    #print(obj.key.split('/')[-1])
                     files.append(obj.key.split('/')[-1].split('.')[0])
             print("Files names ==========")
             print(files)
@@ -182,10 +177,6 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
             bags_status["Failed"].append(status_bag)
         shutil.rmtree(os.path.join(resultpath, 'src/', bag))
 
-    """
-    {"s3_destination": s3_destination,"task_id":task_id,
-            "bags":bags_with_mmsids,"format_params":format_params,"bags_status":bags_status}
-    """
     return {"s3_destination": s3_destination,"task_id":task_id,
             "bags":bags_with_mmsids,"format_params":format_params,"bags_status":bags_status}
 
@@ -213,7 +204,7 @@ def processimage(inpath, outpath, outformat="TIFF", filter="ANTIALIAS", scale=No
 @task
 def update_catalog(task_id,bag,paramstring,mmsid=None):
     """
-
+    :param task_id: task_id used for getting the mmsid
     :param bag: bag name
     :param paramstring: eg. jpeg_040_antialias
     :param mmsid: mmsid of the bag
@@ -258,13 +249,14 @@ def update_catalog(task_id,bag,paramstring,mmsid=None):
 
 @task
 def process_recipe(derivative_args,rmlocal=True):
-    """
-        This function generates the recipe file and returns the json stats of which bags are successful
-        and which are not.
+    '''
+    This function generates the recipe file and returns the json stats of which bags are successful
+    and which have failed.
+    :param derivative_args: The arguments returned by read_source_update_derivative function.
+    :param rmlocal: default value is True. It removes the local directory structure created on the host side.
+    :return: Derivative and Recipe Statistics are returned.
+    '''
 
-        params:
-        derivative_args:The arguments returned by read_source_update_derivative function.
-    """
     s3_bucket = 'ul-cc'
     s3_destination = 'derivative'
     if type(derivative_args) == 'str':
@@ -322,13 +314,16 @@ def process_recipe(derivative_args,rmlocal=True):
 
 @task
 def bag_derivative(task_id,bag_name,format_params,update_manifest=True):
-    """
-        This methods create a bag for the derivative folder
+    '''
+    This methods create a bag for the derivative folder
         and updates the bag-info.txt generated
-        args :
-            bagName: str
-            update_manifest : boolean
-    """
+
+    :param task_id: used for accessing the bag location on the host side
+    :param bag_name: name of the bag eg. Abbati_1703
+    :param format_params: used for accessing the bag location and it is of the type eg.jpeg_040_antialias
+    :param update_manifest: default value is True. It creates the updated manifest file.
+    :return: doesn't return anything
+    '''
 
     path = _get_path(task_id,bag_name,format_params)
     try:
@@ -346,13 +341,17 @@ def bag_derivative(task_id,bag_name,format_params,update_manifest=True):
 
 @task
 def recipe_file_creation(task_id,bag_name,mmsid,format_params,title=None):
-    """
-        This method creates the recipe.json file and updates it into the derivative folder of the bag
-        args:
-            bag_name: str - name of the bag
-            mmsid: dictionary "mmsid":value
-            formatparams :  str eg . jpeg_040_antialias
-    """
+    '''
+    This method creates the recipe.json file and updates it into the derivative folder of the bag
+
+    :param task_id: This id is used for getting the path to the bag
+    :param bag_name: name of the bag
+    :param mmsid: dictionary "mmsid":value
+    :param format_params: str eg . jpeg_040_antialias
+    :param title: used as label for the bag.
+    :return: doesn't return anything
+    '''
+
     path = _get_path(task_id,bag_name,format_params)
     try:
         bag = bagit.Bag(path)

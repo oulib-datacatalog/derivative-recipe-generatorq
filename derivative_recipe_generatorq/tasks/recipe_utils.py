@@ -18,15 +18,20 @@ def _get_path(taskid,bag_name,formatparams):
     return "{0}/oulib_tasks/{1}/derivative/{2}/{3}".format(basedir,taskid,bag_name,formatparams)
 
 def make_recipe(task_id,bag_name,mmsid,payload,formatparams,title):
-    """
-        This file returns a dictionary with all the details needed by the recipe
-        args:
-            bag_name = str
-            mmsid = dictionary , "mmsid":value
-            payload = dictionary , directory structure inside the /data of the bag
-            formatparams :  str eg . jpeg_040_antialias
-        :returns JSON containing all the required details.
-    """
+    '''
+
+    This function returns a dictionary with all the details needed by the recipe file.
+    This is a helper function
+
+    :param task_id: this id is used for locating the bag on the host side
+    :param bag_name: name of the bag
+    :param mmsid: this is mmsid of the bag provided as a dictionary eg. "mmsid":value
+    :param payload: this is a dictionary and it has the directory structure inside the /data of the bag
+    :param formatparams: a string generated from format parameters eg. jpeg_040_antialias
+    :param title: title of the bag
+    :return: json as a string containing the recipe details
+    '''
+
     meta = OrderedDict()
     meta['recipe']= OrderedDict()
     meta['recipe']['import'] = 'book'
@@ -53,7 +58,7 @@ def make_recipe(task_id,bag_name,mmsid,payload,formatparams,title):
 
 def process_manifest(bag_name,payload,formatparams=None):
     """
-
+    This function generates the manifest required for the recipe file.
     :param bag_name: name of the bag
     :param payload: payload of the bag containing paths
     :param formatparams: e.g., jpeg_040_antialias

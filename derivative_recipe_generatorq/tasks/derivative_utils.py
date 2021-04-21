@@ -14,11 +14,14 @@ def _formatextension(imageformat):
         return imageformat.lower()
 
 def _params_as_string(outformat="", filter="", scale=None, crop=None):
-    """
+    '''
     Internal function to return image processing parameters as a single string
-    Input: outformat="TIFF", filter="ANTIALIAS", scale=0.5, crop=[10, 10, 200, 200]
-    Returns: tiff_050_antialias_10_10_200_200
-    """
+    :param outformat: "TIFF"
+    :param filter: "ANTIALIAS"
+    :param scale: 0.5
+    :param crop: [10, 10, 200, 200]
+    :return: tiff_050_antialias_10_10_200_200
+    '''
     imgformat = outformat.lower()
     imgfilter = filter.lower() if scale else None  # do not include filter if not scaled
     imgscale = str(int(scale * 100)).zfill(3) if scale else "100"
@@ -29,8 +32,15 @@ def _params_as_string(outformat="", filter="", scale=None, crop=None):
 def _processimage(inpath, outpath, outformat="TIFF", filter="ANTIALIAS", scale=None, crop=None):
     """
     Internal function to create image derivatives
-
+    :param inpath: path containing the image
+    :param outpath: path where image derivative need to written to
+    :param outformat: output format of the image
+    :param filter: filter that needs to be applied
+    :param scale: scaling of the image
+    :param crop: crop sizes of the image
+    :return: nothing
     """
+
     try:
         image = Image.open(inpath)
         # workaround for Pillow not handling 16bit images

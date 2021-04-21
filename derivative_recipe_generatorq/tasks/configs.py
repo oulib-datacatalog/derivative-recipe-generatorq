@@ -1,5 +1,5 @@
 
-
+# This is used to get the configurations.
 base_url = 'https://cc.lib.ou.edu/api'
 digital_objects_url = f'{base_url}/catalog/data/catalog/digital_objects'
 error_bags_url = f'{base_url}/catalog/data/catalog/bags_with_errors'
