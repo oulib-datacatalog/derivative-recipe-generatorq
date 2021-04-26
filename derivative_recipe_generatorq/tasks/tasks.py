@@ -367,8 +367,9 @@ def recipe_file_creation(task_id,bag_name,mmsid,format_params,title=None):
 def insert_data_into_mongoDB(database_name='catalog',collection_name='digital_objects',force=False):
     """
     This is a test function used for inserting records into local database.
-
-    :return:
+    :param database_name: name of mongodb database (default is 'catalog')
+    :param collection_name: name of collection in mongodb databse (default is 'digital_objects')
+    :return: string 'successful' or 'already exists'
     """
     response = requests.get('https://cc.lib.ou.edu/api/catalog/data/catalog/digital_objects/?query={"filter":{"department":"DigiLab","project":{"$ne":"private"},"locations.s3.exists":{"$eq":true}}}&format=json&page_size=0')
     jobj = response.json()
@@ -377,7 +378,7 @@ def insert_data_into_mongoDB(database_name='catalog',collection_name='digital_ob
     print(db_client.database_names())
     database = db_client[database_name]
 
-    if (not collection_name in db_client.cybercom.collection_names()) or force == True:
+    if (not collection_name in db_client[database_name].collection_names()) or force == True:
         mycol = database[collection_name]
         for data in results:
             mycol.insert_one(data)
