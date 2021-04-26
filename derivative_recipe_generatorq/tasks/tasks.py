@@ -208,7 +208,7 @@ def update_catalog(task_id,bag,paramstring,mmsid=None):
     :return: boolean. True for successful updation. False for failure.
     """
     db_client = app.backend.database.client
-    collection = db_client.cybercom.catalog
+    collection = db_client.catalog.digital_objects
     query = {"bag": bag}
     document = collection.find_one(query)
     if document == None:
@@ -364,7 +364,7 @@ def recipe_file_creation(task_id,bag_name,mmsid,format_params,title=None):
 
 
 @task
-def insert_data_into_mongoDB():
+def insert_data_into_mongoDB(database_name='catalog',collection_name='digital_objects',force=False):
     """
     This is a test function used for inserting records into local database.
 
@@ -375,10 +375,10 @@ def insert_data_into_mongoDB():
     results = jobj.get('results')
     db_client = app.backend.database.client
     print(db_client.database_names())
-    database = db_client["cybercom"]
+    database = db_client[database_name]
 
-    if not "catalog" in db_client.cybercom.collection_names():
-        mycol = database["catalog"]
+    if (not collection_name in db_client.cybercom.collection_names()) or force == True:
+        mycol = database[collection_name]
         for data in results:
             mycol.insert_one(data)
         return "successful"
