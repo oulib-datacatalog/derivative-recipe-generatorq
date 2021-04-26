@@ -10,7 +10,7 @@ from uuid import uuid5, NAMESPACE_DNS
 repoUUID = uuid5(NAMESPACE_DNS, 'repository.ou.edu')
 
 ou_derivative_bag_url = "https://bag.ou.edu/derivative"
-basedir = "/data/web_data/static"
+basedir = "/data/cybercom_output"
 
 
 
