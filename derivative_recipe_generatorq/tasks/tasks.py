@@ -364,7 +364,7 @@ def recipe_file_creation(task_id,bag_name,mmsid,format_params,title=None):
 
 
 @task
-def insert_data_into_mongoDB(database_name='catalog',collection_name='digital_objects',force=False):
+def insert_data_into_mongoDB(database_name='catalog',collection_name='digital_objects'):
     """
     This is a test function used for inserting records into local database.
     :param database_name: name of mongodb database (default is 'catalog')
@@ -378,7 +378,7 @@ def insert_data_into_mongoDB(database_name='catalog',collection_name='digital_ob
     print(db_client.database_names())
     database = db_client[database_name]
 
-    if (not collection_name in db_client[database_name].collection_names()) or force == True:
+    if not collection_name in db_client[database_name].collection_names():
         mycol = database[collection_name]
         for data in results:
             mycol.insert_one(data)
