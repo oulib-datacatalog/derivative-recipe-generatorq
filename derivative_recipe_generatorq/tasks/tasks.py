@@ -35,7 +35,7 @@ app.config_from_object(celeryconfig)
 #api_url = "{0}/api".format(base_url)
 search_url = "{0}?query={{\"filter\": {{\"bag\": \"{1}\"}}}}"
 
-basedir = "/data/web_data/static"
+basedir = "/data/cybercom_output"
 bagList=[]
 
 def getAllBags():
