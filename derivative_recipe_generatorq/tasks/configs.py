@@ -1,6 +1,7 @@
 
 # This is used to get the configurations.
 base_url = 'https://cc.lib.ou.edu/api'
+base_dir = '/data/cybercom_output'
 digital_objects_url = f'{base_url}/catalog/data/catalog/digital_objects'
 error_bags_url = f'{base_url}/catalog/data/catalog/bags_with_errors'
 alma_api_url = 'https://api-na.hosted.exlibrisgroup.com/almaws/v1'

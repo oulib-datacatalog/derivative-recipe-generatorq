@@ -17,7 +17,7 @@ import boto3,botocore,shutil
 import re
 from botocore.exceptions import ClientError
 from celery import signature
-from .configs import base_url, recipe_url
+from .configs import base_url, recipe_url, base_dir
 
 
 repoUUID = uuid5(NAMESPACE_DNS, 'repository.ou.edu')
@@ -35,7 +35,6 @@ app.config_from_object(celeryconfig)
 #api_url = "{0}/api".format(base_url)
 search_url = "{0}?query={{\"filter\": {{\"bag\": \"{1}\"}}}}"
 
-basedir = "/data/cybercom_output"
 bagList=[]
 
 def getAllBags():
@@ -100,7 +99,7 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
     """
 
     task_id = str(self.request.id)
-    resultpath = os.path.join(basedir, 'oulib_tasks/', task_id)
+    resultpath = os.path.join(base_dir, 'oulib_tasks/', task_id)
     os.makedirs(resultpath)
     s3 = boto3.resource('s3')
     #FIXME: hardcode bucket name as of now , get from Env or Log an error if bucket name is not provided.
@@ -275,7 +274,7 @@ def process_recipe(derivative_args,rmlocal=True):
                 continue
             bag_derivative(task_id,bag_name,format_params)
             recipe_file_creation(task_id,bag_name,mmsid,format_params)
-            bagpath = "{0}/oulib_tasks/{1}/derivative/{2}/{3}".format(basedir, task_id, bag_name,format_params)
+            bagpath = "{0}/oulib_tasks/{1}/derivative/{2}/{3}".format(base_dir, task_id, bag_name,format_params)
             logging.info("Accessing bag at: {0}".format(bagpath))
             for filepath in iglob("{0}/*.*".format(bagpath)):
                 filename = filepath.split('/')[-1].lower()
@@ -304,7 +303,7 @@ def process_recipe(derivative_args,rmlocal=True):
             else:
                 bags_status["Success"].append(bag_name)
             if rmlocal is True:
-                rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(basedir, task_id,bag_name))
+                rmtree("{0}/oulib_tasks/{1}/derivative/{2}".format(base_dir, task_id,bag_name))
     return {"Derivative-Recipe stats":"{0}".format(str(bags_status))}
 
 @task

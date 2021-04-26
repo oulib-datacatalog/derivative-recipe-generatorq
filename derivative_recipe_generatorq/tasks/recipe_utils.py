@@ -4,18 +4,18 @@ from collections import OrderedDict
 import json
 from json import loads,dumps
 from .utils import *
+from .configs import base_dir
 import jinja2
 from inspect import cleandoc
 from uuid import uuid5, NAMESPACE_DNS
 repoUUID = uuid5(NAMESPACE_DNS, 'repository.ou.edu')
 
 ou_derivative_bag_url = "https://bag.ou.edu/derivative"
-basedir = "/data/cybercom_output"
 
 
 
 def _get_path(taskid,bag_name,formatparams):
-    return "{0}/oulib_tasks/{1}/derivative/{2}/{3}".format(basedir,taskid,bag_name,formatparams)
+    return "{0}/oulib_tasks/{1}/derivative/{2}/{3}".format(base_dir,taskid,bag_name,formatparams)
 
 def make_recipe(task_id,bag_name,mmsid,payload,formatparams,title):
     '''
