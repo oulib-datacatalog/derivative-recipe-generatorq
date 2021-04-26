@@ -1,7 +1,6 @@
 from PIL import Image
 from tempfile import NamedTemporaryFile
 from subprocess import check_call, check_output
-base_url = "https://cc.lib.ou.edu"
 
 def _formatextension(imageformat):
     """ get common file extension of image format """

@@ -10,8 +10,7 @@ from collections import OrderedDict
 import os
 import boto3
 from botocore.exceptions import ClientError
-from .configs import base_url, alma_api_url, repository_url, bag_gateway_url, error_bags_url
-from .configs import digital_objects_url
+from .configs import alma_api_url,bag_gateway_url,digital_objects_url
 from json import dumps
 
 def _get_mmsid_bag_name(bag):
@@ -36,7 +35,6 @@ def searchcatalog(bag):
 
 def _get_mmsid_bag_info(bag):
     s3 = boto3.resource('s3')
-
     #FIXME: Change this bucket-name
     bucket_name = "ul-cc"
     print("Bucket Name in get_mmsid - {0}".format(bucket_name))
@@ -45,16 +43,13 @@ def _get_mmsid_bag_info(bag):
         recipe_obj = s3.Object(bucket_name, s3_key)
     except ClientError as e:
         logging.error(e)
-    # recipe_obj = s3.Object(bucket_name, s3_key)
     bag_info = yaml.load(recipe_obj.get()['Body'].read())
     try:
         mmsid = bag_info['FIELD_EXTERNAL_DESCRIPTION'].split()[-1].strip()
-        print("bagname --- {0} = mmsid = {1}".format(bag, mmsid))
     except KeyError:
         logging.error("Cannot determine mmsid for bag from bag-info: {0}".format(bag))
         return None
     if re.match("^[0-9]{8,19}$", mmsid):  # check that we have an mmsid like value
-        print("The matched value is=", re.match("^[0-9]{8,19}$", mmsid))
         return mmsid
     return None
 
@@ -167,7 +162,7 @@ def get_bib_record(mmsid):
         :param mmsid: mmsid of the bag
         :return bibrecord  or None
     """
-    url = "https://api-na.hosted.exlibrisgroup.com/almaws/v1/bibs/{0}?expand=None&apikey={1}"
+    url = alma_api_url + "/bibs/{0}?expand=None&apikey={1}"
 
     apikey = os.environ.get('ALMA_READ_TOKEN')
     if not apikey:

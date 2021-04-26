@@ -17,6 +17,8 @@ import boto3,botocore,shutil
 import re
 from botocore.exceptions import ClientError
 from celery import signature
+from .configs import base_url, recipe_url
+
 
 repoUUID = uuid5(NAMESPACE_DNS, 'repository.ou.edu')
 
@@ -27,18 +29,17 @@ assert str(repoUUID) == "eb0ecf41-a457-5220-893a-08b7604b7110"
 app = Celery()
 app.config_from_object(celeryconfig)
 
-ou_derivative_bag_url = "https://bag.ou.edu/derivative"
-recipe_url = ou_derivative_bag_url + "/{0}/{1}/{2}.json"
-base_url = "https://cc.lib.ou.edu"
-api_url = "{0}/api".format(base_url)
+#ou_derivative_bag_url = "https://bag.ou.edu/derivative"
+#recipe_url = ou_derivative_bag_url + "/{0}/{1}/{2}.json"
+#base_url = "https://cc.lib.ou.edu"
+#api_url = "{0}/api".format(base_url)
 search_url = "{0}?query={{\"filter\": {{\"bag\": \"{1}\"}}}}"
 
 basedir = "/data/web_data/static"
-
 bagList=[]
 
 def getAllBags():
-    response = requests.get('{0}/catalog/data/catalog/digital_objects/?action=distinct&field=bag&query={{"filter":{{"department":"DigiLab","project":{{"$ne":"private"}},"locations.s3.exists":{{"$eq":true}},"derivatives.jpeg_040_antialias.recipe":{{"$exists":false,"$error":ne}}}}}}&format=json&page_size=0'.format(api_url))
+    response = requests.get('{0}/catalog/data/catalog/digital_objects/?action=distinct&field=bag&query={{"filter":{{"department":"DigiLab","project":{{"$ne":"private"}},"locations.s3.exists":{{"$eq":true}},"derivatives.jpeg_040_antialias.recipe":{{"$exists":false,"$error":ne}}}}}}&format=json&page_size=0'.format(base_url))
     jobj = response.json()
     results=jobj.get('results')
     for obj in results:
@@ -119,7 +120,6 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
         #code for boto3
         src_input = os.path.join(resultpath, 'src/', bag)
         output = os.path.join(resultpath, 'derivative/', bag,format_params)
-        print(output)
         os.makedirs(src_input)
         os.makedirs(output)
         source_location = "{0}/{1}/data".format(s3_source, bag)
@@ -135,12 +135,9 @@ def read_source_update_derivative(self,bags,bucket_name=None,s3_source="source",
             for obj in bucket.objects.filter(Prefix=filter_loc):
                 if obj.key.split('/')[-1].split('.')[-1] in file_extensions:
                     files.append(obj.key.split('/')[-1].split('.')[0])
-            print("Files names ==========")
-            print(files)
-            print("======================")
+
             if len(files) != len(set(files)):
                 logging.error("Conflict in bag - {0} : Ambiguous file names (eg. 001.tif , 001.tiff)".format(bag))
-                #FIXME: store the failed bag_names , include the reason for failure as well
                 status_flag=True;
                 status_bag = defaultdict()
                 status_bag["name"] =bag
@@ -281,7 +278,6 @@ def process_recipe(derivative_args,rmlocal=True):
             bagpath = "{0}/oulib_tasks/{1}/derivative/{2}/{3}".format(basedir, task_id, bag_name,format_params)
             logging.info("Accessing bag at: {0}".format(bagpath))
             for filepath in iglob("{0}/*.*".format(bagpath)):
-                print(filepath)
                 filename = filepath.split('/')[-1].lower()
                 s3_key = "{0}/{1}/{2}/{3}".format(s3_destination, bag_name, format_params, filename)
                 logging.info("Saving {0} to {1}".format(filename, s3_key))
@@ -290,7 +286,6 @@ def process_recipe(derivative_args,rmlocal=True):
                 except ClientError as e:
                     logging.error(e)
             for filepath in iglob("{0}/data/*.*".format(bagpath)):
-                print(filepath)
                 filename = filepath.split('/')[-1].lower()
                 s3_key = "{0}/{1}/{2}/data/{3}".format(s3_destination, bag_name, format_params, filename)
                 logging.info("Saving {0} to {1}".format(filename, s3_key))
