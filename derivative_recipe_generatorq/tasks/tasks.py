@@ -63,7 +63,7 @@ def automate(outformat=None,filter=None,scale=None,crop=None,bag=None):
     for bag in getSample():
         result = chain(read_source_update_derivative.s(bag,None,"source", "derivative", "JPEG", filter, scale,crop),
                        process_recipe.s())
-    result.delay()
+        result.delay()
 
 def listpagefiles(task_id,bag_name, paramstring):
     """
