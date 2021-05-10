@@ -5,10 +5,10 @@ from unittest.mock import patch, MagicMock, Mock, call
 from PIL import Image
 from nose.tools import assert_true, assert_equal
 
-from practiceq.tasks import update_catalog, read_source_update_derivative, processimage
+from derivative_recipe_generatorq.tasks import update_catalog, read_source_update_derivative, processimage
 
 
-@patch('practiceq.tasks.tasks.Celery.backend')
+@patch('derivative_recipe_generatorq.tasks.tasks.Celery.backend')
 def test_update_catalog(mock_backend):
     result = {
     "_id":"5bc06295b1164c2fcd9fc324",
@@ -405,7 +405,7 @@ def test_update_catalog(mock_backend):
     actual_result = update_catalog("Abbati_1703","jpeg_antialias")
     assert_true(actual_result)
 """
-@patch('practiceq.tasks.tasks.Celery.backend')
+@patch('derivative_recipe_generatorq.tasks.tasks.Celery.backend')
 def test_update_catalog_second_functionality(mock_backend):
     result = {
     "_id":"5bc06295b1164c2fcd9fc324",
@@ -918,7 +918,7 @@ def test_update_catalog_second_functionality(mock_backend):
     assert_true(actual_result)
 
 """
-@patch('practiceq.tasks.tasks.Celery.backend')
+@patch('derivative_recipe_generatorq.tasks.tasks.Celery.backend')
 def test_update_catalog_break(mock_backend):
     #result = None
     mock_backend.database.client.cybercom.catalog.find_one.return_value = None
@@ -926,10 +926,10 @@ def test_update_catalog_break(mock_backend):
     assert_equal(actual_result,False)
 
 import glob
-@patch('practiceq.tasks.tasks.get_mmsid')
-@patch('practiceq.tasks.tasks.check_output')
-@patch('practiceq.tasks.tasks.glob.glob')
-@patch('practiceq.tasks.tasks.processimage')
+@patch('derivative_recipe_generatorq.tasks.tasks.get_mmsid')
+@patch('derivative_recipe_generatorq.tasks.tasks.check_output')
+@patch('derivative_recipe_generatorq.tasks.tasks.glob.glob')
+@patch('derivative_recipe_generatorq.tasks.tasks.processimage')
 def test_read_source_update_derivative(image_1,paths,output,mmsid):
     with tempfile.TemporaryDirectory() as tmpdir:
         image = Image.new("RGB", size=(100, 100), color=(256, 0, 0))
@@ -947,8 +947,8 @@ def test_read_source_update_derivative(image_1,paths,output,mmsid):
         image_1.assert_called()
         assert_equal(image_1.call_count,2)
 
-@patch('practiceq.tasks.tasks.update_catalog')
-@patch('practiceq.tasks.tasks.get_mmsid')
+@patch('derivative_recipe_generatorq.tasks.tasks.update_catalog')
+@patch('derivative_recipe_generatorq.tasks.tasks.get_mmsid')
 def test_read_source_update_derivative_no_mmsid(mmsid,catalog_mock):
     with tempfile.TemporaryDirectory() as tmpdir:
         mmsid.return_value = None
@@ -959,9 +959,9 @@ def test_read_source_update_derivative_no_mmsid(mmsid,catalog_mock):
         catalog_mock.assert_called()
 
 
-@patch('practiceq.tasks.tasks.bag_derivative')
-@patch('practiceq.tasks.tasks.recipe_file_creation')
-@patch('practiceq.tasks.tasks.update_catalog')
+@patch('derivative_recipe_generatorq.tasks.tasks.bag_derivative')
+@patch('derivative_recipe_generatorq.tasks.tasks.recipe_file_creation')
+@patch('derivative_recipe_generatorq.tasks.tasks.update_catalog')
 def test_process_recipe(catalog_mock,recipe_mock,bag_mock):
     bag_mock.return_value = Mock()
 

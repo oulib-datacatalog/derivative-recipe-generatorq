@@ -2,11 +2,11 @@ from unittest import mock
 from unittest.mock import patch
 import builtins
 
-from more_itertools import side_effect
+#from more_itertools import side_effect
 
-from practiceq.tasks.utils import get_title_from_marc
+from derivative_recipe_generatorq.tasks.utils import get_title_from_marc
 
-from practiceq.tasks.utils import get_mmsid, get_marc_datafield, get_marc_subfield_text
+from derivative_recipe_generatorq.tasks.utils import get_mmsid, get_marc_datafield, get_marc_subfield_text
 from nose.tools import assert_true, assert_false, assert_equal, assert_not_equal, assert_is_none, nottest, assert_raises
 import yaml
 from lxml import etree as ET
@@ -81,8 +81,8 @@ def test_get_marc_subfield_text():
     response = get_marc_subfield_text(tag_id, sub_code, root)
     assert_equal(response, None)
 
-@patch("practiceq.tasks.utils.get_marc_datafield")
-@patch("practiceq.tasks.utils.get_marc_subfield_text")
+@patch("derivative_recipe_generatorq.tasks.utils.get_marc_datafield")
+@patch("derivative_recipe_generatorq.tasks.utils.get_marc_subfield_text")
 def test_get_title_from_marc(mock_sub_field, mock_datafield):
     xml = """
             <marc>

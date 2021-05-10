@@ -4,7 +4,6 @@ from celery import chain
 from celery.task import task
 from glob import iglob
 from celery import Celery
-import celeryconfig
 from uuid import uuid5, NAMESPACE_DNS
 import json
 from shutil import rmtree
@@ -19,6 +18,10 @@ from botocore.exceptions import ClientError
 from celery import signature
 from .configs import base_url, recipe_url, base_dir
 
+try:
+    import celeryconfig
+except ImportError:
+    celeryconfig = None
 
 repoUUID = uuid5(NAMESPACE_DNS, 'repository.ou.edu')
 

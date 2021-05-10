@@ -2,7 +2,7 @@ import os
 from PIL import Image
 from nose.tools import assert_equal, assert_true
 import tempfile
-from practiceq.tasks.derivative_utils import _formatextension, _params_as_string, _processimage
+from derivative_recipe_generatorq.tasks.derivative_utils import _formatextension, _params_as_string, _processimage
 
 
 def test_formatextension():
@@ -25,7 +25,7 @@ def test_params_as_string():
     value = _params_as_string(outformat="jpeg", filter="xyz", scale=0.40, crop=[10, 10, 10, 10])
     assert_equal(value, "jpeg_040_xyz_10_10_10_10")
 
-#@patch("practiceq.tasks.derivative_utils.PIL.Image")
+#@patch("derivative_recipe_generatorq.tasks.derivative_utils.PIL.Image")
 #16-bitcolor depth tif images.
 def test_processimage():
     with tempfile.TemporaryDirectory() as tmpdir:

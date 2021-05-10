@@ -9,12 +9,12 @@ import tempfile
 
 import jinja2
 from nose.tools import assert_raises, assert_equal, assert_true, assert_false
-from practiceq.tasks.recipe_utils import bag_derivative, recipe_file_creation, make_recipe, process_manifest
+from derivative_recipe_generatorq.tasks.recipe_utils import bag_derivative, recipe_file_creation, make_recipe, process_manifest
 
 
-#@patch("practiceq.tasks.recipe_utils.bagit.make_bag")
-#@patch("practiceq.tasks.recipe_utils.bagit.Bag")
-@patch("practiceq.tasks.recipe_utils._get_path")
+#@patch("derivative_recipe_generatorq.tasks.recipe_utils.bagit.make_bag")
+#@patch("derivative_recipe_generatorq.tasks.recipe_utils.bagit.Bag")
+@patch("derivative_recipe_generatorq.tasks.recipe_utils._get_path")
 def test_bag_derivative_validity(path):
     with tempfile.TemporaryDirectory() as tmpdir:
         with open(os.path.join(tmpdir,"x.txt"),'w') as f:
@@ -38,7 +38,7 @@ def test_bag_derivative_validity(path):
     #assert_equal(bagit.)
     #path.return_value=2
     #assert_false(bagit.BagError)
-@patch("practiceq.tasks.recipe_utils._get_path")
+@patch("derivative_recipe_generatorq.tasks.recipe_utils._get_path")
 def test_bag_derivative_validity_1(path):
     with tempfile.TemporaryDirectory() as tmpdir:
         with open(os.path.join(tmpdir,"x.txt"),'w') as f:
@@ -51,8 +51,8 @@ def test_bag_derivative_validity_1(path):
 
 
 #might need other one
-@patch("practiceq.tasks.recipe_utils.make_recipe")
-@patch("practiceq.tasks.recipe_utils._get_path")
+@patch("derivative_recipe_generatorq.tasks.recipe_utils.make_recipe")
+@patch("derivative_recipe_generatorq.tasks.recipe_utils._get_path")
 def test_recipe_file_creation(path,recipe):
     with tempfile.TemporaryDirectory() as tmpdir:
         with open(os.path.join(tmpdir,"x.txt"),'w') as f:
@@ -67,11 +67,11 @@ def test_recipe_file_creation(path,recipe):
             value = f.read()
         assert_equal(value,"Some content")
 
-@patch("practiceq.tasks.recipe_utils.process_manifest")
-@patch("practiceq.tasks.recipe_utils.get_title_from_marc")
-@patch("practiceq.tasks.recipe_utils.get_marc_xml")
-@patch("practiceq.tasks.recipe_utils.get_bib_record")
-@patch("practiceq.tasks.recipe_utils._get_path")
+@patch("derivative_recipe_generatorq.tasks.recipe_utils.process_manifest")
+@patch("derivative_recipe_generatorq.tasks.recipe_utils.get_title_from_marc")
+@patch("derivative_recipe_generatorq.tasks.recipe_utils.get_marc_xml")
+@patch("derivative_recipe_generatorq.tasks.recipe_utils.get_bib_record")
+@patch("derivative_recipe_generatorq.tasks.recipe_utils._get_path")
 def test_make_recipe(path,bib_record,marc_xml,title,pages):
     test_dic = {
     "recipe": {
